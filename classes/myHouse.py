@@ -27,6 +27,33 @@ class House:
     def remaining_energy_history(self):
        return list(np.array(self.import_energy_history) - np.array(self.export_energy_history))
 
+    def battery_management_system(self, remaining_energy, current_time):
+        released_energy, stored_energy = 0, 0
+
+        # If surplus -> charge
+        if remaining_energy <= 0:
+            stored_energy = self.battery.store_energy(-remaining_energy)
+
+        # If deficit and SOC > reserve threshold -> discharge
+        elif remaining_energy > 0 and self.battery.SOC > self.battery.reserve_soc(current_time):
+            released_energy = self.battery.release_energy(remaining_energy)
+
+        # If deficit and SOC ≤ reserve -> cautious strategy
+        elif remaining_energy > 0 and self.battery.SOC <= self.battery.reserve_soc(current_time):
+            if remaining_energy > self.battery.dynamic_threshold(self.remaining_energy_history()):
+                released_energy = self.battery.release_energy(remaining_energy)
+            else:
+                released_energy = 0
+
+        else:
+            raise ValueError("Unhandled BMS case.")
+
+        assert not (released_energy > 0 and stored_energy > 0), \
+            "Battery released and stored energy cannot be positive at the same time."
+
+        return released_energy, stored_energy
+
+
     def simulate_household(self):
         df = self.grid_data.df
         time_values = df['time'].values
@@ -40,9 +67,12 @@ class House:
             # Battery management
             remaining_required = 0
             remaining_excess = 0
+
+            released_energy, stored_energy = self.battery_management_system(tmp_remaining_energy, time_values[k])
+
             if tmp_remaining_energy> 0:
                 # Discharge battery
-                released_energy = self.battery.release_energy(tmp_remaining_energy)
+                # released_energy = self.battery.release_energy(tmp_remaining_energy)
                 remaining_required = tmp_remaining_energy - released_energy
                 if remaining_required < 0:
                     raise ValueError("Released energy from battery exceeds remaining required energy.")
@@ -50,22 +80,23 @@ class House:
                 self.import_cost += remaining_required*self.price_per_kWh        
             else:
                 # Charge battery
-                stored_energy = self.battery.store_energy(-tmp_remaining_energy)
+                # stored_energy = self.battery.store_energy(-tmp_remaining_energy)
                 remaining_excess = -tmp_remaining_energy - stored_energy
                 if remaining_excess < 0:
                     raise ValueError("Stored energy exceeds remaining excess energy.")
                 self.energy_cost -= remaining_excess * self.injection_price
                 self.export_revenue += remaining_excess * self.injection_price
-            # print('Battery State of Charge (SOC):', self.battery.SOC)
             
             # Save history
             self.import_energy_history.append(remaining_required)
             self.export_energy_history.append(remaining_excess)
-            
+            self.battery.SOC_history.append(self.battery.SOC)
+
         return self.import_energy_history, self.export_energy_history
 
-    def optimize_battery_capacity(self, max_capacity_kwh=20):
+    def optimize_battery_capacity(self, max_capacity_kwh=15):
         total_cost_array = []
+        annualized_battery_cost_array = []
         no_points = 40
         capacity_array = np.linspace(0, max_capacity_kwh, no_points)
 
@@ -73,11 +104,15 @@ class House:
         time_values = df['time'].values
         time_span = (time_values[-1] - time_values[0]) / np.timedelta64(1, 'D')  # Time span in days
         
-        for capacity in capacity_array:
+        for idx, capacity in enumerate(capacity_array):
+            print(f"Progress: {idx+1}/{no_points} (Battery capacity: {capacity:.2f} kWh)")
             self.battery = Battery(max_capacity=capacity)
             self.simulate_household()
-            total_cost = (self.energy_cost/time_span)*365 + self.battery.battery_cost() / self.battery.battery_lifetime # over 1 year
+            annualized_energy_cost = (self.energy_cost / time_span)*365
+            annualized_battery_cost = self.battery.battery_cost() / self.battery.battery_lifetime
+            total_cost = annualized_energy_cost + annualized_battery_cost # total annualized cost
             total_cost_array.append(total_cost)
+            annualized_battery_cost_array.append(annualized_battery_cost)           
 
         savings_list = -(total_cost_array - total_cost_array[0]) # Savings compared to no battery
         optimal_idx = np.argmax(savings_list)
@@ -85,22 +120,26 @@ class House:
         self.battery = Battery(max_capacity=self.optimal_battery_capacity)
         self.simulate_household()
 
-        return capacity_array, savings_list
+        return capacity_array, savings_list, annualized_battery_cost_array
 
     def plot_energy_history(self):
+        
         df = self.grid_data.df
-        time_values = df['time'].values
+        time = df['time'].values
         
         fig, axes = plt.subplots(1, 2, figsize=(16, 6))
         # Line plot
-        axes[0].plot(self.import_energy_history, label='Import Energy (kWh)', color='red')
-        axes[0].plot(self.export_energy_history, label='Export Energy (kWh)', color='green')
-        axes[0].axhline(self.battery.max_capacity, color='blue', linestyle='--', label=f'Battery Capacity ({self.battery.max_capacity:.2f} kWh)')
+        axes[0].plot(time, self.import_energy_history, label='Import Energy (kWh)', color='red')
+        axes[0].plot(time, self.export_energy_history, label='Export Energy (kWh)', color='green')
         axes[0].set_title('Energy History')
         axes[0].set_xlabel('Time (hours)')
         axes[0].set_ylabel('Energy (kWh)')
         axes[0].legend()
         axes[0].grid()
+
+        # Add price annotation (energy cost)
+        price_text = f"Total Energy Cost: {self.energy_cost:.2f} EUR\nImport Cost: {self.import_cost:.2f} EUR\nExport Revenue: {self.export_revenue:.2f} EUR"
+        axes[0].text(0.05, 0.95, price_text, transform=axes[0].transAxes, fontsize=10, verticalalignment='top', bbox=dict(boxstyle="round,pad=0.3", facecolor="lightyellow", alpha=0.5))
 
         # Histogram of simulated remaining energy
         axes[1].hist(self.remaining_energy_history(), bins=30, color='purple', alpha=0.7)
