@@ -5,8 +5,8 @@ from scipy.optimize import minimize, minimize_scalar
 from datetime import datetime, timedelta
 
 # Default file path
-DEFAULT_FILE_PATH = 'C:\\Users\\Smeets\\My Drive\\Personal\\Projects\\FluviusBerekeningen\\P1e-2025-6-01-2025-8-01.csv'
-DEFAULT_FILE_PATH = "C:\\Users\\Victor\\My Drive (victor.smeets99@gmail.com)\\Personal\\Projects\\FluviusBerekeningen\\gridData\\P1e-2025-7-01-2025-8-24.csv"
+DEFAULT_FILE_PATH = 'C:\\Users\\Smeets\\Documents\\GitHub\\FuviusCalculations\\Data\\gridData\\P1e-2025-7-01-2025-8-24.csv'
+# DEFAULT_FILE_PATH = "C:\\Users\\Victor\\My Drive (victor.smeets99@gmail.com)\\Personal\\Projects\\FluviusBerekeningen\\gridData\\P1e-2025-7-01-2025-8-24.csv"
 
 def LoadData(start_date=None, end_date=None, file_path=None):
     """
@@ -535,8 +535,8 @@ if __name__ == "__main__":
     # Run the full analysis with default settings
     # smartmeter_data = run_full_analysis(start_date="2025-07-28", end_date="2025-08-08")
     smartmeter_data = run_full_analysis()
-    # results_df, results = simulate_battery_operation(smartmeter_data)
-    # print(results_df.head())
+    results_df, results = simulate_battery_operation(smartmeter_data)
+    print(results_df.head())
     
     # Run battery optimization analysis
     results = optimize_battery_capacity(smartmeter_data)
