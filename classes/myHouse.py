@@ -28,6 +28,23 @@ class House:
        return list(np.array(self.import_energy_history) - np.array(self.export_energy_history))
 
     def battery_management_system(self, remaining_energy, current_time):
+        return self.dynamic_battery_management_system(remaining_energy, current_time)
+        return self.greedy_battery_management_system(remaining_energy)
+        return self.predictive_battery_management_system(remaining_energy, current_time)
+    
+    def greedy_battery_management_system(self,remaining_energy):
+        released_energy, stored_energy = 0, 0
+        if remaining_energy > 0:
+            # Discharge battery
+            released_energy = self.battery.release_energy(remaining_energy)
+        else:
+            # Charge battery
+            stored_energy = self.battery.store_energy(-remaining_energy)
+        return released_energy, stored_energy
+
+    def dynamic_battery_management_system(self, remaining_energy, current_time):
+        # Next step: predictive control
+        # Use previous day as a reference
         released_energy, stored_energy = 0, 0
 
         # If surplus -> charge
@@ -53,6 +70,40 @@ class House:
 
         return released_energy, stored_energy
 
+    def predictive_battery_management_system(self, remaining_energy, current_time):
+        window_size = 5
+        # Look at the behaviour of the previous day around that time
+        horizon = 96 + np.round([-window_size/2, window_size/2]) # == 1 day
+        remaining_energy_history = list(np.array(self.import_energy_history) - np.array(self.export_energy_history))
+        energy_previous_day = remaining_energy_history[-horizon] if len(remaining_energy_history) >= len(horizon) else remaining_energy_history
+
+        # Calculate the energy trend
+        current_trend = (remaining_energy - remaining_energy_history[-1]) if len(remaining_energy_history) > 0 else 0
+        previous_trend = pd.Series(energy_previous_day).rolling(window=4, min_periods=1).mean().to_numpy()
+        
+        # Find the coresponding points: minimize difference current_trend and previous_trend
+        min_diff = float('inf')
+        min_index = -1
+        for i in range(len(previous_trend)):
+            diff = abs(current_trend - previous_trend[i])
+            if diff < min_diff:
+                min_diff = diff
+                min_index = i
+
+        # Find where we are in the previous day's timeline
+        if min_index != -1:
+            # Map current time to previous day's time
+            time_mapping = (current_time - pd.Timedelta(days=1)).floor('15T')
+            previous_time = time_mapping + pd.Timedelta(minutes=15 * min_index)
+            # Get the corresponding energy value
+            if previous_time in self.import_energy_history.index:
+                previous_energy = self.import_energy_history.loc[previous_time]
+            else:
+                previous_energy = 0
+        else:
+            previous_energy = 0
+
+        return self.dynamic_battery_management_system(remaining_energy, current_time)
 
     def simulate_household(self):
         df = self.grid_data.df
@@ -131,7 +182,7 @@ class House:
         # Line plot
         axes[0].plot(time, self.import_energy_history, label='Import Energy (kWh)', color='red')
         axes[0].plot(time, self.export_energy_history, label='Export Energy (kWh)', color='green')
-        axes[0].set_title('Energy History')
+        axes[0].set_title(f'Energy History (Battery Capacity: {self.battery.max_capacity:.2f} kWh)')
         axes[0].set_xlabel('Time (hours)')
         axes[0].set_ylabel('Energy (kWh)')
         axes[0].legend()

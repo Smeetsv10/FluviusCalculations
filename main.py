@@ -16,7 +16,7 @@ import_energy_history_0, export_energy_history_0 = Kwadestraat_6.simulate_househ
 Kwadestraat_6.plot_energy_history()
 
 # Simulate: with battery
-Kwadestraat_6.battery = Battery(max_capacity=10, efficiency=0.95)
+Kwadestraat_6.battery = Battery(max_capacity=7.7, efficiency=0.95)
 import_energy_history_10, export_energy_history_10 = Kwadestraat_6.simulate_household()
 Kwadestraat_6.plot_energy_history()
 Kwadestraat_6.battery.plot_SOC()
