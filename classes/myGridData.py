@@ -3,10 +3,16 @@ import os
 import matplotlib.pyplot as plt
 
 class GridData:
-    def __init__(self, file_name, start_date=None, end_date=None):
-        self.file_name = file_name
-        self.data_folder = os.path.join(os.getcwd(), 'Data', 'gridData')
-        self.file_path = os.path.join(self.data_folder, self.file_name)
+    def __init__(self, file_name=None, file_path=None, start_date=None, end_date=None):
+        if file_path is None:
+            if file_name is None:
+                raise ValueError("Either file_name or file_path must be provided.")
+            self.file_name = file_name
+            self.data_folder = os.path.join(os.getcwd(), 'Data', 'gridData')
+            self.file_path = os.path.join(self.data_folder, self.file_name)
+        else:
+            self.file_path = file_path
+            self.file_name = os.path.basename(file_path)
         
         self.start_date = start_date
         self.end_date = end_date
@@ -90,10 +96,10 @@ class GridData:
         df['export_night'] = df['Export T2 kWh'].diff().fillna(df['Export T2 kWh'].iloc[0])
 
         # Reset first row of daily_day_import to 0
-        df['import_day'].iloc[0] = 0
-        df['import_night'].iloc[0] = 0
-        df['export_day'].iloc[0] = 0
-        df['export_night'].iloc[0] = 0
+        df.loc[0, 'import_day'] = 0
+        df.loc[0, 'import_night'] = 0
+        df.loc[0, 'export_day'] = 0
+        df.loc[0, 'export_night'] = 0
 
         # Calculate total daily import and export
         df['import'] = df['import_day'] + df['import_night']
@@ -102,7 +108,7 @@ class GridData:
         df['remaining_night'] = df['import_night'] - df['export_night']
         df['remaining'] = df['import'] - df['export']
 
-        time_vec = df['time'].diff().dt.total_seconds().fillna(method='bfill') / 3600
+        time_vec = df['time'].diff().dt.total_seconds().bfill() / 3600
         df['import_power'] = df['import'] / time_vec
         df['export_power'] = df['export'] / time_vec
         df['remaining_power'] = df['remaining'] / time_vec
@@ -120,7 +126,6 @@ class GridData:
         if self.df.empty:
             raise ValueError("Dataframe is empty. Load and process data before visualization.")
 
-        print("Visualizing grid data...")
         df = self.df
 
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
@@ -198,4 +203,5 @@ class GridData:
                         bbox=dict(boxstyle="round,pad=0.3", facecolor="lightgray", alpha=0.5))
 
         plt.tight_layout()
-        print("Visualization completed successfully")
+
+        return fig
