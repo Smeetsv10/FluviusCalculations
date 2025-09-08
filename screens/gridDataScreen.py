@@ -7,7 +7,6 @@ def gridDataScreen(page: ft.Page):
     page.title = "Grid Data Screen"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.activeFigure = None
-    page.grid_data = None
     page.selected_file = None
 
     # File picker
@@ -34,7 +33,7 @@ def gridDataScreen(page: ft.Page):
                 page.open(page.snackbar)
                 page.update()
                 return
-            page.grid_data = GridData(file_path=page.selected_file, start_date=start_date.value, end_date=end_date.value)
+            page.house.grid_data = GridData(file_path=page.selected_file, start_date=start_date.value, end_date=end_date.value)
             page.snackbar = ft.SnackBar(ft.Text("Data Loaded Successfully!"))
             page.open(page.snackbar)
             page.update()
@@ -46,12 +45,12 @@ def gridDataScreen(page: ft.Page):
     chart_container = ft.Container(expand=True, padding=8, alignment=ft.alignment.center)
 
     def visualize_data(e):
-        if page.grid_data is None:
+        if page.house.grid_data is None:
             page.snackbar = ft.SnackBar(ft.Text("Please load data first!"))
             page.open(page.snackbar)
             page.update()
             return
-        fig = page.grid_data.visualize_data()
+        fig = page.house.grid_data.visualize_data()
         chart = MatplotlibChart(fig, expand=True)
         chart_container.content = chart
         page.update()

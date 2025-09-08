@@ -200,4 +200,5 @@ class House:
         axes[1].grid(True)
 
         plt.tight_layout()
+        return fig
     

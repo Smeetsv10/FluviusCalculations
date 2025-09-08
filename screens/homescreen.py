@@ -3,6 +3,8 @@ from screens.gridDataScreen import gridDataScreen
 from screens.batteryScreen import batteryScreen
 from screens.houseScreen import houseScreen
 
+from classes.myHouse import House
+
 
 def results_page():
     return ft.Text("Results Page: View results for the given grid data, battery, and house.")
@@ -10,6 +12,9 @@ def results_page():
 def homescreen(page: ft.Page):
     page.title = "Home Screen"
     page.vertical_alignment = ft.MainAxisAlignment.CENTER    
+
+    # Define classes
+    page.house = House()
     
     tabs = ft.Tabs(
         selected_index=0,
