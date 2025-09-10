@@ -1,6 +1,10 @@
+from urllib import response
 import pandas as pd
 import os
 import matplotlib.pyplot as plt
+import requests
+from geopy.geocoders import Nominatim
+
 
 class GridData:
     def __init__(self, file_name=None, file_path=None, start_date=None, end_date=None):
@@ -205,3 +209,4 @@ class GridData:
         plt.tight_layout()
 
         return fig
+    

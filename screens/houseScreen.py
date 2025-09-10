@@ -39,7 +39,7 @@ def houseScreen(page: ft.Page):
             page.open(page.snackbar)
             page.update()
             return
-        if page.house.grid_data is None:
+        if page.house.grid_data is None or page.house.grid_data.df.isempty:
             page.snackbar = ft.SnackBar(ft.Text("Please load grid data in the Grid Data Screen!"))
             page.open(page.snackbar)
             page.update()

@@ -9,6 +9,7 @@ class SolarPanel:
         ''' Calculate the solar power output in kW'''
         return self.area * self.efficiency * irradiance / 1000
 
+
 class SolarPanels:
     def __init__(self):
         self.panels = []

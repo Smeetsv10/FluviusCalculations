@@ -1,5 +1,6 @@
 from classes.myBattery import Battery
-from lib.classes.myGridData import GridData
+from classes.myGridData import GridData
+from classes.myEliaData import EliaData
 from classes.myHouse import House
 from classes.mySolarPanel import SolarPanel
 import matplotlib.pyplot as plt
@@ -10,6 +11,10 @@ grid_data.visualize_data()
 Kwadestraat_6 = House(location="Hoegaarden, Belgium",
                       battery=Battery(max_capacity=0, efficiency=0.95),
                       grid_data=grid_data)
+
+elia_data = EliaData()
+elia_data.load_data(Kwadestraat_6.location)
+elia_data.visualize_data()
 
 # Simulate: no battery
 import_energy_history_0, export_energy_history_0 = Kwadestraat_6.simulate_household()
