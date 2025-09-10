@@ -46,13 +46,15 @@ class GridData:
         print("Column names:", data.columns.to_list())
         
         # Convert time column to datetime for better processing
-        data['time'] = pd.to_datetime(data['time'])
+        data['datetime'] = pd.to_datetime(data['time'])
+        data['datetime'] = data['datetime'].dt.tz_localize('Europe/Brussels')
+
 
         # Filter data by stored date range if provided
         if self.start_date is not None:
-            data = data[data['time'] >= self.start_date]
+            data = data[data['datetime'] >= self.start_date]
         if self.end_date is not None:
-            data = data[data['time'] <= self.end_date]
+            data = data[data['datetime'] <= self.end_date]
         
         # Reset index after filtering
         data = data.reset_index(drop=True)
@@ -82,10 +84,10 @@ class GridData:
         df.dropna(inplace=True)
 
         # Sort by time and reset index
-        df = df.sort_values('time').reset_index(drop=True)
+        df = df.sort_values('datetime').reset_index(drop=True)
 
-        self.start_date = df['time'].min()
-        self.end_date = df['time'].max()
+        self.start_date = df['datetime'].min()
+        self.end_date = df['datetime'].max()
         print(f"Data date range: {self.start_date} to {self.end_date}")
         
         # Also keep cumulative totals for comparison
@@ -112,7 +114,7 @@ class GridData:
         df['remaining_night'] = df['import_night'] - df['export_night']
         df['remaining'] = df['import'] - df['export']
 
-        time_vec = df['time'].diff().dt.total_seconds().bfill() / 3600
+        time_vec = df['datetime'].diff().dt.total_seconds().bfill() / 3600
         df['import_power'] = df['import'] / time_vec
         df['export_power'] = df['export'] / time_vec
         df['remaining_power'] = df['remaining'] / time_vec
@@ -136,8 +138,8 @@ class GridData:
         fig.suptitle('Energy Consumption and Production Analysis', fontsize=16, fontweight='bold')
 
         # Plot 1: Daily Import vs Export Energy (actual daily values)
-        axes[0, 0].plot(df['time'], df['import'], label='Import', color='blue')
-        axes[0, 0].plot(df['time'], df['export'], label='Export', color='orange')
+        axes[0, 0].plot(df['datetime'], df['import'], label='Import', color='blue')
+        axes[0, 0].plot(df['datetime'], df['export'], label='Export', color='orange')
         axes[0, 0].set_title('Import vs Export Energy (kWh)')
         axes[0, 0].set_xlabel('Date')
         axes[0, 0].set_ylabel('Energy (kWh)')
@@ -145,9 +147,9 @@ class GridData:
         axes[0, 0].grid(True)
 
         # Plot 2: Daily Remaining Consumption
-        axes[0, 1].plot(df['time'], df['remaining'], label='Remaining Consumption', color='black')
-        axes[0, 1].fill_between(df['time'], df['remaining'], 0, where=(df['remaining'] > 0), color='red', alpha=0.5, label='Excess import power')
-        axes[0, 1].fill_between(df['time'], df['remaining'], 0, where=(df['remaining'] < 0), color='green', alpha=0.5, label='Excess export power')
+        axes[0, 1].plot(df['datetime'], df['remaining'], label='Remaining Consumption', color='black')
+        axes[0, 1].fill_between(df['datetime'], df['remaining'], 0, where=(df['remaining'] > 0), color='red', alpha=0.5, label='Excess import power')
+        axes[0, 1].fill_between(df['datetime'], df['remaining'], 0, where=(df['remaining'] < 0), color='green', alpha=0.5, label='Excess export power')
         axes[0, 1].set_title('Daily Remaining Consumption (kWh)')
         axes[0, 1].set_xlabel('Date')
         axes[0, 1].set_ylabel('Remaining Consumption (kWh)')
@@ -155,9 +157,9 @@ class GridData:
         axes[0, 1].grid(True)
 
         # Plot 3: Cumulative Import vs Export (original cumulative values)
-        axes[0, 2].plot(df['time'], df['cumulative_import'], label='Cumulative Import', color='blue')
-        axes[0, 2].plot(df['time'], df['cumulative_export'], label='Cumulative Export', color='orange')
-        axes[0, 2].plot(df['time'], df['cumulative_remaining_energy'], label='Cumulative Remaining', color='green')
+        axes[0, 2].plot(df['datetime'], df['cumulative_import'], label='Cumulative Import', color='blue')
+        axes[0, 2].plot(df['datetime'], df['cumulative_export'], label='Cumulative Export', color='orange')
+        axes[0, 2].plot(df['datetime'], df['cumulative_remaining_energy'], label='Cumulative Remaining', color='green')
         axes[0, 2].set_title('Cumulative Import/Export/Remaining (kWh)')
         axes[0, 2].set_xlabel('Date')
         axes[0, 2].set_ylabel('Cumulative Energy (kWh)')
@@ -165,9 +167,9 @@ class GridData:
         axes[0, 2].grid(True)
 
         # Plot 4: Import/Export Power
-        axes[1, 0].plot(df['time'], df['import_power'], label='Import Power', color='blue')
-        axes[1, 0].plot(df['time'], df['export_power'], label='Export Power', color='orange')
-        axes[1, 0].plot(df['time'], df['remaining_power'], label='remaining Power', color='green')
+        axes[1, 0].plot(df['datetime'], df['import_power'], label='Import Power', color='blue')
+        axes[1, 0].plot(df['datetime'], df['export_power'], label='Export Power', color='orange')
+        axes[1, 0].plot(df['datetime'], df['remaining_power'], label='remaining Power', color='green')
         axes[1, 0].set_title('Import/Export/remaining Power')
         axes[1, 0].set_xlabel('Date')
         axes[1, 0].set_ylabel('Power (kW)')
