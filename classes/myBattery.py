@@ -12,6 +12,9 @@ class Battery:
         self.C_rate = 1 # (1/h)
         
         self.SOC_history = []
+        
+        assert 0 < self.efficiency <= 1, "Efficiency must be between 0 and 1"
+        assert self.max_capacity >= 0, "Max capacity must be non-negative"
 
     def battery_cost(self):
         return self.price_per_kWh * self.max_capacity
@@ -44,24 +47,29 @@ class Battery:
         return 0.15 * avg_load  # 15% of avg load
 
     def store_energy(self, energy):
-        ''' Store energy in the battery (kWh)'''
+        """Store energy in the battery (kWh) accounting for symmetric efficiency losses."""
         if self.max_capacity <= 0:
             return 0
-        energy_in = energy # Account for storage losses
+        
+        # Apply efficiency during charging
+        energy_in = energy * self.efficiency
+        
         charge_limit = min(self.max_charge_rate(), self.available_capacity())
         storable_energy = min(energy_in, charge_limit)
         
         self.SOC += storable_energy / self.max_capacity
-        return storable_energy
+        return storable_energy / self.efficiency  # Return the "original" input energy used
 
     def release_energy(self, energy):
-        ''' Release energy from the battery (kWh)'''
+        """Release energy from the battery (kWh) accounting for symmetric efficiency losses."""
         if self.max_capacity <= 0:
             return 0
+        
         discharge_limit = min(self.max_charge_rate(), self.current_capacity())
         releasable_energy = min(energy, discharge_limit)
+        
         self.SOC -= releasable_energy / self.max_capacity
-        return releasable_energy * self.efficiency
+        return releasable_energy * self.efficiency  # Energy actually delivered to load
 
     def plot_SOC(self):
         ''' Plot the State of Charge (SOC) over time '''
