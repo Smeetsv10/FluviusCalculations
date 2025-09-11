@@ -9,7 +9,7 @@ class Battery:
         self.SOC = 0.33 # State of Charge (-)
         self.price_per_kWh = 700
         self.battery_lifetime = 10 # (years)
-        self.C_rate = 1 # (1/h)
+        self.C_rate = 0.25 / 4 # == (1/h)
         
         self.SOC_history = []
         

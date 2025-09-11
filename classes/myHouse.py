@@ -115,12 +115,13 @@ class House:
 
         return self.import_energy_history, self.export_energy_history
 
-    def optimize_battery_capacity(self, max_capacity_kwh=15):
+    def optimize_battery_capacity(self, max_capacity_kwh=10):
         total_cost_array = []
         annualized_battery_cost_array = []
-        no_points = 40
+        no_points = int(2*max_capacity_kwh)+1
         capacity_array = np.linspace(0, max_capacity_kwh, no_points)
-
+        self.battery_management_system = self.dynamic_battery_management_system
+        
         df = self.grid_data.df
         time_values = df['datetime'].values
         time_span = (time_values[-1] - time_values[0]) / np.timedelta64(1, 'D')  # Time span in days
@@ -232,7 +233,41 @@ class House:
         self.plot_energy_history()
         
         return self.import_energy_history, self.export_energy_history
-        
+    
+    def optimize_reserve_soc(self):
+        # Initial guess: [evening_peak, night_peak, daytime]
+        x0 = [0.5, 0.25, 0.05]
+        bounds = [(0.01, 0.9), (0.01, 0.9), (0.01, 0.9)]
+
+        def cost_function(x):
+            evening_peak, night_peak, daytime = x
+
+            def reserve_soc_patched(current_time):
+                hour = pd.Timestamp(current_time).hour
+                if 17 <= hour < 20:
+                    return evening_peak
+                elif 0 <= hour < 6:
+                    return night_peak
+                else:
+                    return daytime
+
+            # Patch the method
+            self.battery.reserve_soc = reserve_soc_patched
+
+            # Run simulation and return cost
+            self.simulate_household()
+            cost = self.annualized_cost_function()
+            print(f"Evaluating: evening={evening_peak:.2f}, night={night_peak:.2f}, day={daytime:.2f} -> cost={cost:.2f}")
+
+
+            return self.annualized_cost_function()
+
+        result = minimize(cost_function, x0, bounds=bounds, method='L-BFGS-B')
+        opt_evening, opt_night, opt_day = result.x
+
+        print(f"Optimal SOC reserves: evening={opt_evening:.2f}, night={opt_night:.2f}, day={opt_day:.2f}")
+        print(f"Minimum annualized cost: {result.fun:.2f} EUR")
+        return result.x, result.fun 
 
     def plot_energy_history(self):
         df = self.grid_data.df
