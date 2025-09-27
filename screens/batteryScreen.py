@@ -1,5 +1,5 @@
 import flet as ft
-from classes.myBattery import Battery
+from classes import Battery
 
 
 def batteryScreen(page: ft.Page):

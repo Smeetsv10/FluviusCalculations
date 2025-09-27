@@ -1,9 +1,7 @@
 import flet as ft
-from screens.gridDataScreen import gridDataScreen
-from screens.batteryScreen import batteryScreen
-from screens.houseScreen import houseScreen
 
-from classes.myHouse import House
+from screens import houseScreen, gridDataScreen, batteryScreen
+from classes import House
 
 
 def results_page():

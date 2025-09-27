@@ -1,5 +1,5 @@
 import flet as ft
-from classes.myGridData import GridData
+from classes import GridData
 from flet.matplotlib_chart import MatplotlibChart
 
 

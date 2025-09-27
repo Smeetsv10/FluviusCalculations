@@ -1,11 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-from classes.myBattery import Battery
-from classes.mySolarPanel import SolarPanels
-from classes.myEliaData import EliaData
-from classes.myGridData import GridData
-from classes.myClimateData import ClimateData
+from classes import Battery, SolarPanels, EliaData, GridData, ClimateData
 import cvxpy as cp
 import numpy as np
 from scipy.optimize import minimize
