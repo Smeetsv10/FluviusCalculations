@@ -7,8 +7,13 @@ environment:
   sdk: ^3.10.0-268.0.dev
 
 dependencies:
+  
   flutter:
     sdk: flutter
+  file_picker: ^10.3.3
+  http: ^1.1.0
+  fl_chart: ^0.68.0  
+    
 
 dev_dependencies:
   flutter_test:

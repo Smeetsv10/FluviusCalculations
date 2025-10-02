@@ -17,7 +17,7 @@ class FluviusData:
         
         self.flag_EV = True  # Only keep users with no Electric Vehicle (EV) charging points
         self.flag_PV = True  # Only keep users with no Photovoltaic (PV) panels
-        self.EAN_ID = None  # Specific user ID to filter data for (None means random)
+        self.EAN_ID = -1  # Specific user ID to filter data for (None means random)
         
         self.start_date = start_date
         self.end_date = end_date
@@ -46,7 +46,7 @@ class FluviusData:
         data = data[data['PV_Installatie_Indicator'] == self.flag_PV]
 
         # Choose a  EAN_ID
-        if self.EAN_ID is not None:
+        if self.EAN_ID != -1:
              chosen_ean = self.EAN_ID
         else:
             unique_ean_ids = data['EAN_ID'].unique()
@@ -106,7 +106,7 @@ class FluviusData:
             data = self.df_raw
             print("Raw data already loaded. Skipping reload.")
 
-        data = self.apply_data_flags(data)
+        data = self.apply_data_flags(data) # Only applies for open data Fluvius
     
         # Convert time column to datetime for better processing
         data['datetime'] = pd.to_datetime(data['Datum_Startuur'])           # CET format
