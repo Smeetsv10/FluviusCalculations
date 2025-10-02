@@ -4,7 +4,12 @@ import matplotlib.pyplot as plt
 import cvxpy as cp
 import numpy as np
 from scipy.optimize import minimize
-from classes import Battery, SolarPanels, EliaData, GridData, ClimateData, FluviusData
+from classes.myBattery import Battery
+from classes.myEliaData import EliaData
+from classes.mySolarPanel import SolarPanels
+from classes.myFluviusData import FluviusData
+from classes.myClimateData import ClimateData
+
 
 class House:
     def __init__(self, location='', battery=None, solar_panels=None, injection_price=0.04, price_per_kWh=0.35, grid_data=None, elia_data=None, climate_data=None):

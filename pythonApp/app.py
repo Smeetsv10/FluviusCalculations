@@ -14,7 +14,7 @@ app = FastAPI(title="Fluvius Energy API", version="1.0")
 # ---------------------------
 @app.get("/")
 def root():
-    return {"message": "FluviusCalculations API is running!"}
+    return {"message": "Check 2!"}
 
 class SimulationRequest(BaseModel):
     start_date: str
