@@ -10,14 +10,8 @@ import random
 import numpy as np
 
 class FluviusData:
-    def __init__(self, file_name='default.csv', file_path=None, start_date=None, end_date=None):
-        if file_path is None:
-            if file_name is None:
-                raise ValueError("Either file_name or file_path must be provided.")
-            self.file_name = file_name
-            self.data_folder = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'gridData')
-            self.file_path = os.path.join(self.data_folder, self.file_name)
-        else:
+    def __init__(self, file_path=None, start_date=None, end_date=None):
+        if file_path is not None:
             self.file_path = file_path
             self.file_name = os.path.basename(file_path)
         
@@ -34,6 +28,12 @@ class FluviusData:
         self.df_raw_file_path = None
     
     # === Functions to load and process data ===
+    def set_file_path(self, file_path):
+        self.file_path = file_path
+        self.file_name = os.path.basename(file_path)
+        if not self.df_raw_file_path == self.file_path:
+            self.df_raw_file_path = self.file_path
+
     def load_csv(self):
         print(f"Loading data from: {self.file_path}")
         data = pd.read_csv(self.file_path, sep=',')

@@ -1,31 +1,52 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 from typing import List, Optional
+from datetime import date, timedelta
+
+# Import your simplified classes
+from classes.myHouse import House
 from classes.myBattery import Battery
-from classes.myHouse import House 
 from classes.myFluviusData import FluviusData
 
-
+# ---------------------------
 # FastAPI app
-app = FastAPI(title="Fluvius Energy API", version="1.0")
+# ---------------------------
+app = FastAPI(title="FluviusCalculations API", version="1.0")
+
+# ---------------------------
+# Global variable for grid data
+# ---------------------------
+grid_data: Optional[FluviusData] = None
 
 # ---------------------------
 # Request/Response Models
 # ---------------------------
-@app.get("/")
-def root():
-    return {"message": "Check 2!"}
+today = date.today()
+seven_days_ago = today - timedelta(days=7)
 
 class SimulationRequest(BaseModel):
-    start_date: str
-    end_date: str
-    battery_capacity: Optional[float] = 0.0
-    efficiency: Optional[float] = 0.95
-    location: Optional[str] = None
-    dynamic: Optional[bool] = False
-    file_path: Optional[str] = None
-    file_name: Optional[str] = None
+    # Dates
+    start_date: Optional[str] = seven_days_ago.isoformat()
+    end_date: Optional[str] = today.isoformat()
     
+    # House parameters
+    location: Optional[str] = ""
+    injection_price: Optional[float] = 0.04
+    price_per_kWh: Optional[float] = 0.35
+    
+    # Battery parameters
+    battery_capacity: Optional[float] = 0.0
+    battery_lifetime: Optional[int] = 10
+    price_per_kWh_battery: Optional[float] = 700
+    efficiency: Optional[float] = 0.95
+    C_rate: Optional[float] = 0.25 / 4
+    dynamic: Optional[bool] = False
+    
+    # FluviusData parameters
+    flag_EV: Optional[bool] = True
+    flag_PV: Optional[bool] = True
+    EAN_ID: Optional[str] = None
+    file_path: Optional[str] = None  # optional file path if needed
 
 class SimulationResponse(BaseModel):
     import_energy: List[float]
@@ -36,32 +57,62 @@ class SimulationResponse(BaseModel):
     energy_cost: float
     optimal_capacity: Optional[float] = None
 
+# ---------------------------
+# Root endpoint
+# ---------------------------
+@app.get("/")
+def root():
+    return {"message": "FluviusCalculations API is running!"}
 
 # ---------------------------
-# Endpoints
+# Load data once
 # ---------------------------
+@app.post("/load_data")
+def load_data(request: SimulationRequest):
+    global grid_data
+    
+    # Load Fluvius data only once
+    if grid_data is None:
+        grid_data = FluviusData(
+            file_path=request.file_path,
+            start_date=request.start_date,
+            end_date=request.end_date
+        )
+        try:
+            grid_data.load_data()
+        except Exception as e:
+            return {"error": f"Failed to load grid data: {e}"}
+        try:
+            grid_data.process_data()
+        except Exception as e:
+            return {"error": f"Failed to process grid data: {e}"}
 
+# ---------------------------
+# Simulate household using preloaded grid data
+# ---------------------------
 @app.post("/simulate", response_model=SimulationResponse)
 def simulate_household(request: SimulationRequest):
-    """
-    Simulate a household given start_date, end_date, and battery settings.
-    """
+    global grid_data
+    if grid_data is None:
+        return {"error": "Grid data not loaded. Call /load_data first."}
 
-    # Load Fluvius data for requested period
-    grid_data = FluviusData(start_date=request.start_date, end_date=request.end_date)
-
-    # Create House
+    # Create House with Battery
     house = House(
-        battery=Battery(max_capacity=request.battery_capacity, efficiency=request.efficiency),
-        grid_data=grid_data
+        battery=Battery(max_capacity=request.battery_capacity, 
+                        efficiency=request.efficiency,
+                        price_per_kWh=request.price_per_kWh_battery,
+                        battery_lifetime=request.battery_lifetime,
+                        C_rate=request.C_rate),
+        grid_data=grid_data,
+        injection_price=request.injection_price,
+        price_per_kWh=request.price_per_kWh
+        
     )
 
-    # If dynamic flag is set, switch management strategy
-    if request.dynamic:
-        house.battery_management_system = house.dynamic_battery_management_system
-
-    # Run simulation
-    import_energy, export_energy = house.simulate_household()
+    try:
+        import_energy, export_energy = house.simulate_household()
+    except Exception as e:
+        return {"error": f"Simulation failed: {e}"}
 
     return SimulationResponse(
         import_energy=import_energy,
@@ -72,21 +123,29 @@ def simulate_household(request: SimulationRequest):
         energy_cost=house.energy_cost
     )
 
-
+# ---------------------------
+# Optimize battery capacity
+# ---------------------------
 @app.post("/optimize", response_model=SimulationResponse)
 def optimize_battery(request: SimulationRequest):
-    """
-    Run battery capacity optimization and return optimal capacity + savings.
-    """
+    global grid_data
+    if grid_data is None:
+        return {"error": "Grid data not loaded. Call /load_data first."}
 
-    grid_data = FluviusData(start_date=request.start_date, end_date=request.end_date)
     house = House(
-        battery=Battery(max_capacity=request.battery_capacity, efficiency=request.efficiency),
+        battery=Battery(max_capacity=request.battery_capacity, 
+                        efficiency=request.efficiency,
+                        price_per_kWh=request.price_per_kWh_battery,
+                        battery_lifetime=request.battery_lifetime,
+                        C_rate=request.C_rate),
         grid_data=grid_data
     )
 
-    capacities, savings, battery_cost = house.optimize_battery_capacity()
-    
+    try:
+        house.optimize_battery_capacity()
+    except Exception as e:
+        return {"error": f"Optimization failed: {e}"}
+
     return SimulationResponse(
         import_energy=house.import_energy_history,
         export_energy=house.export_energy_history,
