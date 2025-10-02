@@ -131,7 +131,8 @@ def load_data(request: SimulationRequest):
             "message": "Data loaded and processed successfully",
             "data_info": {
                 "records": len(grid_data.df),
-                "date_range": date_range_info
+                "date_range": date_range_info,
+
             }
         }
         
@@ -209,3 +210,36 @@ def optimize_battery(request: SimulationRequest):
         energy_cost=house.energy_cost,
         optimal_capacity=house.optimal_battery_capacity
     )
+
+@app.post("/plot_data")
+def plot_data(request: SimulationRequest):
+    global grid_data
+    if grid_data is None:
+        return {"error": "Grid data not loaded. Call /load_data first."}
+
+    try:
+        # Get the matplotlib figure from visualize_data
+        fig = grid_data.visualize_data()
+        
+        # Convert the plot to a base64 string
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+        buffer.seek(0)
+        
+        # Encode to base64
+        plot_data_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        buffer.close()
+        
+        # Close the figure to free memory
+        plt.close(fig)
+        
+        return {
+            "message": "Plot generated successfully",
+            "plot_data": plot_data_b64
+        }
+        
+    except Exception as e:
+        import traceback
+        print(f"❌ Error in plot_data: {e}")
+        print(f"Full traceback: {traceback.format_exc()}")
+        return {"error": f"Plotting failed: {str(e)}"}

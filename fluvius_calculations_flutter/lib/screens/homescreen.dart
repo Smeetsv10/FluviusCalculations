@@ -208,6 +208,10 @@ class _HomeScreenState extends State<HomeScreen> {
               message +=
                   '\n• Date range: ${dataInfo['date_range']['start']} to ${dataInfo['date_range']['end']}';
             }
+            setState(() {
+              startDateController.text = dataInfo['date_range']['start'] ?? '';
+              endDateController.text = dataInfo['date_range']['end'] ?? '';
+            });
           }
 
           _showSuccessDialog('Success', message);
@@ -246,25 +250,79 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> plotData() async {
     try {
-      final response = await http.get(Uri.parse('$apiBaseUrl/plot_data'));
+      // Check if data is loaded first
+      if (csvFileBytes == null && filePathController.text.isEmpty) {
+        _showErrorDialog(
+          'Data Required',
+          'Please load data first before plotting.',
+        );
+        return;
+      }
+
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      // Construct request body (you might not need all fields for plotting)
+      final requestBody = {
+        'start_date': startDateController.text,
+        'end_date': endDateController.text,
+        'location': locationController.text,
+        'injection_price': _parseDouble(injectionPriceController.text) ?? 0.04,
+        'price_per_kWh': _parseDouble(pricePerKWhController.text) ?? 0.35,
+        'battery_capacity': _parseDouble(batteryCapacityController.text) ?? 0.0,
+        'battery_lifetime': _parseInt(batteryLifetimeController.text) ?? 10,
+        'price_per_kWh_battery':
+            _parseDouble(pricePerKWhBatteryController.text) ?? 700.0,
+        'efficiency': _parseDouble(efficiencyController.text) ?? 0.95,
+        'C_rate': _parseDouble(cRateController.text) ?? 0.0625,
+        'dynamic': _parseBool(dynamicController.text),
+        'flag_EV': _parseBool(flagEVController.text),
+        'flag_PV': _parseBool(flagPVController.text),
+        'EAN_ID': eanIdController.text.isEmpty
+            ? -1
+            : _parseInt(eanIdController.text) ?? -1,
+        'file_path': selectedFile?.name ?? filePathController.text,
+      };
+
+      // Make API call to plot_data endpoint
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/plot_data'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(requestBody),
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+
         if (responseData.containsKey('error')) {
           _showErrorDialog('Plot Error', responseData['error']);
-        } else if (responseData.containsKey('plot_image')) {
-          _showPlotDialog(responseData['plot_image']);
+        } else if (responseData.containsKey('plot_data')) {
+          // Show the plot in a dialog
+          _showPlotDialog(responseData['plot_data']);
         } else {
-          _showErrorDialog('Plot Error', 'Invalid response format');
+          _showErrorDialog('Plot Error', 'No plot data received from server.');
         }
       } else {
         _showErrorDialog(
           'HTTP Error',
-          'Plot request failed with status: ${response.statusCode}',
+          'Request failed with status: ${response.statusCode}\nResponse: ${response.body}',
         );
       }
     } catch (e) {
-      _showErrorDialog('Network Error', 'Failed to get plot: $e');
+      // Close loading dialog if still open
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
+      print('❌ Error in plotData: $e');
+      _showErrorDialog('Network Error', 'Failed to connect to API: $e');
     }
   }
 

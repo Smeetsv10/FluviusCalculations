@@ -326,6 +326,4 @@ class FluviusData:
 
         axes[1].set_xticks(xticks)
         axes[1].set_xticklabels(xticklabels, rotation=45, ha='right')
-
-        plt.tight_layout()
         return fig
