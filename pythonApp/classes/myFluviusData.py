@@ -1,3 +1,4 @@
+import base64
 from urllib import response
 import pandas as pd
 import os
@@ -39,6 +40,30 @@ class FluviusData:
         data = pd.read_csv(self.file_path, sep=',')
         return data
 
+    def load_csv_from_bytes(self, csv_data_b64):
+        """Convert base64 CSV data from Flutter to pandas DataFrame"""
+        try:
+            if not csv_data_b64:
+                print("🔍 DEBUG: No CSV data provided")
+                return pd.DataFrame()
+            
+            print(f"🔍 DEBUG: Received CSV data (base64): {len(csv_data_b64)} characters")
+            
+            # Decode base64 to bytes
+            csv_bytes = base64.b64decode(csv_data_b64)
+            print(f"🔍 DEBUG: Decoded CSV data to bytes: {len(csv_bytes)} bytes")
+            
+            # Convert bytes to string and then to a pandas DataFrame
+            from io import StringIO
+            csv_str = csv_bytes.decode('utf-8')
+            data = pd.read_csv(StringIO(csv_str), sep=',')
+            print(f"🔍 DEBUG: Converted CSV data to DataFrame with {len(data)} rows and {len(data.columns)} columns")
+            
+            return data
+        except Exception as e:
+            print(f"Error loading CSV data from bytes: {e}")
+            return pd.DataFrame()
+    
     def apply_data_flags(self, data):
         # Only keep users with correct EV indicator
         data = data[data['Elektrisch_Voertuig_Indicator'] == self.flag_EV]
@@ -83,7 +108,7 @@ class FluviusData:
 
         return data
 
-    def load_data(self):
+    def load_data(self, data=None):
         """
         Load smart meter data from CSV file.
         
@@ -94,17 +119,21 @@ class FluviusData:
         pandas.DataFrame: Raw data from CSV file with time column converted to datetime
         """
         
-        # Check if raw data is already loaded
-        if not self.df_raw_file_path == self.file_path:
-            print("Loading new raw data from file...")
-            data = self.load_csv()
-            self.df_raw = data
-            self.df_raw_file_path = self.file_path
-            print(f"Raw data loaded with {len(data)} rows.")
-            
+        if data is None:
+            # Check if raw data is already loaded
+            if not self.df_raw_file_path == self.file_path:
+                print("Loading new raw data from file...")
+                data = self.load_csv()
+                self.df_raw = data
+                self.df_raw_file_path = self.file_path
+                print(f"Raw data loaded with {len(data)} rows.")
+                
+            else:
+                data = self.df_raw
+                print("Raw data already loaded. Skipping reload.")
         else:
-            data = self.df_raw
-            print("Raw data already loaded. Skipping reload.")
+            # data is provided directly and does not need to be read from file
+            self.df_raw = data
 
         data = self.apply_data_flags(data) # Only applies for open data Fluvius
     
