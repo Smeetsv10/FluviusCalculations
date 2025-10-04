@@ -192,6 +192,18 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
                   gridData.end_date = '$endDay-$endMonth-$endYear';
                 }),
               ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  minimumSize: const Size(500, 50),
+                ),
+                onPressed: () {},
+                child: const Text(
+                  'Load CSV file',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
             ],
           ),
         ),
