@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
 import 'package:intl/intl.dart';
 
 class GridData extends ChangeNotifier {
@@ -26,6 +27,49 @@ class GridData extends ChangeNotifier {
   // Getter for SOC
   DateTime stringToDateTime(String dateStr) {
     return DateFormat("dd-MM-yyyy").parse(dateStr);
+  }
+
+  Future<bool> pickFiles() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        withData: true,
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final PlatformFile file = result.files.first;
+        selectedFile = file;
+        csvFileBytes = file.bytes;
+
+        if (kIsWeb) {
+          file_path = file.name;
+        } else {
+          file_path = file.path ?? file.name;
+        }
+
+        // Optional debug preview
+        if (csvFileBytes != null) {
+          try {
+            final csvContent = String.fromCharCodes(csvFileBytes!);
+            print(
+              '🔍 CSV preview: ${csvContent.substring(0, csvContent.length.clamp(0, 200))}',
+            );
+          } catch (e) {
+            print('⚠️ Could not preview CSV: $e');
+          }
+        }
+
+        return true;
+      } else {
+        print('🔍 No file selected');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Error picking file: $e');
+      // Propagate the error
+      throw Exception('Failed to select file: $e');
+    }
   }
 
   void updateParameters({

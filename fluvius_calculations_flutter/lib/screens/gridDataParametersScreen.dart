@@ -155,6 +155,7 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // --- Start Date ---
               buildDateDropdown(
                 title: 'Start Date (DD-MM-YYYY)',
                 selectedDay: startDay,
@@ -174,6 +175,8 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
                 }),
               ),
               const SizedBox(height: 16),
+
+              // --- End Date ---
               buildDateDropdown(
                 title: 'End Date (DD-MM-YYYY)',
                 selectedDay: endDay,
@@ -193,16 +196,78 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
                 }),
               ),
               const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  minimumSize: const Size(500, 50),
-                ),
-                onPressed: () {},
-                child: const Text(
-                  'Load CSV file',
-                  style: TextStyle(color: Colors.white),
-                ),
+
+              // --- File path + button row ---
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // File path display (takes 4x space)
+                  Expanded(
+                    flex: 4,
+                    child: TextField(
+                      readOnly: true,
+                      controller: TextEditingController(
+                        text: gridData.file_path.isEmpty
+                            ? 'No file selected'
+                            : gridData.file_path,
+                      ),
+                      decoration: const InputDecoration(
+                        labelText: 'Selected CSV File',
+                        border: OutlineInputBorder(),
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(
+                          vertical: 12,
+                          horizontal: 8,
+                        ),
+                      ),
+                      style: TextStyle(
+                        color: gridData.file_path.isEmpty
+                            ? Colors.grey
+                            : Colors.black,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+
+                  // Load CSV button (takes 1x space)
+                  Expanded(
+                    flex: 1,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        minimumSize: const Size.fromHeight(50),
+                      ),
+                      onPressed: () async {
+                        try {
+                          final success = await gridData.pickFiles();
+
+                          if (!mounted) return;
+
+                          if (!success) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('No file selected.'),
+                              ),
+                            );
+                          }
+                          setState(() {
+                            // Refresh UI to show selected file path
+                          });
+                        } catch (e) {
+                          if (!mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error selecting file: $e')),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Load CSV File',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

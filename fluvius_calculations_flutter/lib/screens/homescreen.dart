@@ -54,36 +54,30 @@ class _HomeScreenState extends State<HomeScreen> {
               color: Colors.black54,
               child: const Center(child: CircularProgressIndicator()),
             ),
-          Consumer<House>(
-            builder: (context, value, child) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // --- House Parameters Section ---
-                    const HouseParameterScreen(),
-                    const SizedBox(height: 20),
-                    // --- Battery Parameters Section ---
-                    const BatteryParameterScreen(),
-                    const SizedBox(height: 20),
-                    // --- Grid Data Parameters Section ---
-                    const GridDataParameterScreen(),
-                    const SizedBox(height: 20),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // --- House Parameters Section ---
+                const HouseParameterScreen(),
+                const SizedBox(height: 20),
+                // --- Battery Parameters Section ---
+                const BatteryParameterScreen(),
+                const SizedBox(height: 20),
+                // --- Grid Data Parameters Section ---
+                const GridDataParameterScreen(),
+                const SizedBox(height: 20),
 
-                    // --- Debug / Print JSON ---
-                    TextButton(
-                      onPressed: () {
-                        print(
-                          Provider.of<House>(context, listen: false).toJson(),
-                        );
-                      },
-                      child: const Text('Print House JSON'),
-                    ),
-                  ],
+                // --- Debug / Print JSON ---
+                TextButton(
+                  onPressed: () {
+                    print(Provider.of<House>(context, listen: false).toJson());
+                  },
+                  child: const Text('Print House JSON'),
                 ),
-              );
-            },
+              ],
+            ),
           ),
         ],
       ),
