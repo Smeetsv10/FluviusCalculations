@@ -9,17 +9,18 @@ class GridData extends ChangeNotifier {
   bool flag_EV = true;
   bool flag_PV = true;
   int EAN_ID = -1;
-  String start_date = '31-12-1999';
-  String end_date = '31-12-1999';
+  late String start_date;
+  late String end_date;
   // DataTable df = DataTable(columns: [], rows: []);
 
   PlatformFile? selectedFile; // Store the selected file
   Uint8List? csvFileBytes; // Store CSV file bytes
 
   GridData() {
-    if (stringToDateTime(start_date).isAfter(stringToDateTime(end_date))) {
-      throw ArgumentError('Start date must be before end date');
-    }
+    start_date = DateFormat(
+      'dd-MM-yyyy',
+    ).format(DateTime.now().subtract(Duration(days: 7)));
+    end_date = DateFormat('dd-MM-yyyy').format(DateTime.now());
   }
 
   // Getter for SOC

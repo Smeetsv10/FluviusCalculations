@@ -39,60 +39,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<House>(
-      builder: (context, house, child) {
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text(
-              'Home Battery Sizing Tool',
-              style: TextStyle(color: Colors.white),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(
+          'Home Battery Sizing Tool',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+      ),
+      body: Stack(
+        children: [
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
             ),
-            backgroundColor: Theme.of(context).colorScheme.primary,
-          ),
-          body: Stack(
-            children: [
-              if (_isLoading)
-                Container(
-                  color: Colors.black54,
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-              SingleChildScrollView(
+          Consumer<House>(
+            builder: (context, value, child) {
+              return SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- Battery Parameters Section ---
-                    ChangeNotifierProvider<Battery>.value(
-                      value: house.battery,
-                      child: const BatteryParameterScreen(),
-                    ),
-                    const SizedBox(height: 20),
-                    ChangeNotifierProvider<House>.value(
-                      value: house,
-                      child: const HouseParameterScreen(),
-                    ),
-                    const SizedBox(height: 20),
                     // --- House Parameters Section ---
-                    ChangeNotifierProvider<GridData>.value(
-                      value: house.grid_data,
-                      child: const GridDataParameterScreen(),
-                    ),
+                    const HouseParameterScreen(),
+                    const SizedBox(height: 20),
+                    // --- Battery Parameters Section ---
+                    const BatteryParameterScreen(),
+                    const SizedBox(height: 20),
+                    // --- Grid Data Parameters Section ---
+                    const GridDataParameterScreen(),
                     const SizedBox(height: 20),
 
                     // --- Debug / Print JSON ---
                     TextButton(
                       onPressed: () {
-                        print(house.toJson());
+                        print(
+                          Provider.of<House>(context, listen: false).toJson(),
+                        );
                       },
                       child: const Text('Print House JSON'),
                     ),
                   ],
                 ),
-              ),
-            ],
+              );
+            },
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 }

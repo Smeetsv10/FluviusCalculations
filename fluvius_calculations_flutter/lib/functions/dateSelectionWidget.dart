@@ -97,7 +97,7 @@ class _DateSelectionWidgetState extends State<DateSelectionWidget> {
     FocusNode? nextFocus,
   }) {
     return SizedBox(
-      width: length * 10 + 15, // width per character
+      width: length * 10 + 20, // width per character
       child: TextField(
         controller: controller,
         focusNode: focusNode,
@@ -129,51 +129,44 @@ class _DateSelectionWidgetState extends State<DateSelectionWidget> {
       color: isValid ? Colors.black : Colors.red,
     );
 
-    return SizedBox(
-      width: 300,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          IntrinsicWidth(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(widget.title, style: titleStyle),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    buildNumberField(
-                      controller: dayController,
-                      length: 2,
-                      focusNode: dayFocus,
-                      nextFocus: monthFocus,
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Text('-'),
-                    ),
-                    buildNumberField(
-                      controller: monthController,
-                      length: 2,
-                      focusNode: monthFocus,
-                      nextFocus: yearFocus,
-                    ),
-                    const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 4),
-                      child: Text('-'),
-                    ),
-                    buildNumberField(
-                      controller: yearController,
-                      length: 4,
-                      focusNode: yearFocus,
-                    ),
-                  ],
-                ),
-              ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start, // Add this line
+      children: [
+        Text(widget.title, style: titleStyle),
+        const SizedBox(height: 8), // Add spacing like other fields
+        Row(
+          // Change from Wrap to Row
+          mainAxisAlignment: MainAxisAlignment.start, // Align to left
+          children: [
+            buildNumberField(
+              controller: dayController,
+              length: 2,
+              focusNode: dayFocus,
+              nextFocus: monthFocus,
             ),
-          ),
-        ],
-      ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text('-'),
+            ),
+            buildNumberField(
+              controller: monthController,
+              length: 2,
+              focusNode: monthFocus,
+              nextFocus: yearFocus,
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 4),
+              child: Text('-'),
+            ),
+            buildNumberField(
+              controller: yearController,
+              length: 4,
+              focusNode: yearFocus,
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
