@@ -12,7 +12,9 @@ dependencies:
     sdk: flutter
   file_picker: ^10.3.3
   http: ^1.1.0
-  fl_chart: ^0.68.0  
+  fl_chart: ^1.1.1
+  provider: ^6.1.5+1
+  intl: ^0.20.2
     
 
 dev_dependencies:

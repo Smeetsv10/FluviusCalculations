@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/screens/homescreen.dart';
+import 'package:provider/provider.dart';
 
 void main() {
-  runApp(const MainApp());
+  WidgetsFlutterBinding.ensureInitialized();
+  runApp(
+    MultiProvider(
+      providers: [ChangeNotifierProvider(create: (_) => House())],
+      child: const MainApp(),
+    ),
+  );
 }
 
 class MainApp extends StatelessWidget {

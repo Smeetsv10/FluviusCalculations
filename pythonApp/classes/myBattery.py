@@ -3,14 +3,14 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class Battery:
-    def __init__(self, max_capacity, efficiency=0.95):
+    def __init__(self, max_capacity, efficiency=0.95, price_per_kWh=700, battery_lifetime=10, C_rate=0.25/4):
         self.max_capacity = max_capacity # (kWh)
         self.efficiency = efficiency # (-)
-        self.SOC = 0.33 # State of Charge (-)
-        self.price_per_kWh = 700
-        self.battery_lifetime = 10 # (years)
-        self.C_rate = 0.25 / 4 # == (1/h)
+        self.price_per_kWh = price_per_kWh
+        self.battery_lifetime = battery_lifetime # (years)
+        self.C_rate = C_rate # == (1/h)
         
+        self.SOC = 0.33 # State of Charge (-)
         self.SOC_history = []
         
         assert 0 < self.efficiency <= 1, "Efficiency must be between 0 and 1"
