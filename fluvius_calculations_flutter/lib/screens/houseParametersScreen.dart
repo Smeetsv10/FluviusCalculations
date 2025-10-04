@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:provider/provider.dart';
-import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
 
 class HouseParameterScreen extends StatefulWidget {
@@ -47,6 +46,8 @@ class _HouseParameterScreenState extends State<HouseParameterScreen> {
           return buildField(
             context: context,
             title: 'Injection Price (€/kWh)',
+            hoverText:
+                'Price you get for injecting electricity into the grid ≈0.05€/kWh',
             min: 0,
             max: 1,
             divisions: 100,
@@ -74,6 +75,8 @@ class _HouseParameterScreenState extends State<HouseParameterScreen> {
           return buildField(
             context: context,
             title: 'Price per kWh (€/kWh)',
+            hoverText:
+                'Total price you pay for electricity from the grid, including taxes, distribution fees, etc. ≈0.35€/kWh',
             min: 0,
             max: 1,
             divisions: 100,
@@ -86,27 +89,27 @@ class _HouseParameterScreenState extends State<HouseParameterScreen> {
           );
         }
 
-        return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "House Parameters",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              Divider(),
-              const SizedBox(height: 8),
-
-              // --- Max Capacity ---
-              buildLocationField(),
-              const SizedBox(height: 8),
-              buildInjectionPriceField(),
-              const SizedBox(height: 8),
-              buildPricePerKWhField(),
-              const SizedBox(height: 8),
-              Divider(),
-            ],
+        return ExpansionTile(
+          title: const Text(
+            "House Parameters",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          initiallyExpanded: true,
+          tilePadding: EdgeInsets.zero,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Column(
+                children: [
+                  buildLocationField(),
+                  const SizedBox(height: 8),
+                  buildInjectionPriceField(),
+                  const SizedBox(height: 8),
+                  buildPricePerKWhField(),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

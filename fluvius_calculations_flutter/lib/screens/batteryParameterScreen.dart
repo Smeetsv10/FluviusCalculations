@@ -175,34 +175,35 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
           );
         }
 
-        return SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Battery Parameters",
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              Divider(),
-              const SizedBox(height: 8),
-
-              // --- Max Capacity ---
-              buildMaxCapacityField(),
-              const SizedBox(height: 8),
-              buildEfficiencyField(),
-              const SizedBox(height: 8),
-              buildSOCField(),
-              const SizedBox(height: 8),
-              buildFixedCostField(),
-              const SizedBox(height: 8),
-              buildVariableCostField(),
-              const SizedBox(height: 8),
-              buildBatteryLifetimeField(),
-              const SizedBox(height: 8),
-              buildCRateField(),
-              Divider(),
-            ],
+        return ExpansionTile(
+          title: const Text(
+            "Battery Parameters",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+          initiallyExpanded: true,
+          tilePadding: EdgeInsets.zero,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Column(
+                children: [
+                  buildMaxCapacityField(),
+                  const SizedBox(height: 8),
+                  buildEfficiencyField(),
+                  const SizedBox(height: 8),
+                  buildSOCField(),
+                  const SizedBox(height: 8),
+                  buildCRateField(),
+                  const SizedBox(height: 16),
+                  buildFixedCostField(),
+                  const SizedBox(height: 8),
+                  buildVariableCostField(),
+                  const SizedBox(height: 8),
+                  buildBatteryLifetimeField(),
+                ],
+              ),
+            ),
+          ],
         );
       },
     );

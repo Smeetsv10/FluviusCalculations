@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/screens/homescreen.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 void main() {
@@ -18,6 +19,17 @@ class MainApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(home: HomeScreen());
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color.fromARGB(255, 34, 116, 36),
+          brightness: Brightness.light,
+        ),
+        textTheme: GoogleFonts.antaTextTheme(Theme.of(context).textTheme),
+        useMaterial3: true,
+      ),
+      home: HomeScreen(),
+    );
   }
 }

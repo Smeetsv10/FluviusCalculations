@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
+import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
 import 'package:fluvius_calculations_flutter/screens/batteryParameterScreen.dart';
+import 'package:fluvius_calculations_flutter/screens/gridDataParametersScreen.dart';
 import 'package:fluvius_calculations_flutter/screens/houseParametersScreen.dart';
 import 'package:provider/provider.dart';
 
@@ -41,8 +43,11 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, house, child) {
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Fluvius Calculations'),
-            backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+            title: const Text(
+              'Home Battery Sizing Tool',
+              style: TextStyle(color: Colors.white),
+            ),
+            backgroundColor: Theme.of(context).colorScheme.primary,
           ),
           body: Stack(
             children: [
@@ -56,18 +61,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Provide the battery separately to BatteryParameterScreen
+                    // --- Battery Parameters Section ---
                     ChangeNotifierProvider<Battery>.value(
                       value: house.battery,
                       child: const BatteryParameterScreen(),
                     ),
-
+                    const SizedBox(height: 20),
                     ChangeNotifierProvider<House>.value(
                       value: house,
                       child: const HouseParameterScreen(),
                     ),
-
                     const SizedBox(height: 20),
+                    // --- House Parameters Section ---
+                    ChangeNotifierProvider<GridData>.value(
+                      value: house.grid_data,
+                      child: const GridDataParameterScreen(),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // --- Debug / Print JSON ---
                     TextButton(
                       onPressed: () {
                         print(house.toJson());

@@ -1,0 +1,26 @@
+[
+  {
+    "family": "MuliBold",
+    "fonts": [
+      {
+        "asset": "fonts/Muli-Bold.tff"
+      }
+    ]
+  },
+  {
+    "family": "MuliExtraBold",
+    "fonts": [
+      {
+        "asset": "fonts/Muli-ExtraBold.ttf"
+      }
+    ]
+  },
+{
+    "family": "MuliRegular",
+    "fonts": [
+      {
+        "asset": "fonts/Muli-Regular.ttf"
+      }
+    ]
+  }
+]
