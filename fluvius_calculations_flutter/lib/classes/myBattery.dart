@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class Battery extends ChangeNotifier {
-  double max_capacity = 10; // in kWh
+  double max_capacity = 0; // in kWh
   double efficiency = 0.95;
   double _SOC = 0.33; // Made private to control access through setter
   double fixed_costs = 1000; // in €

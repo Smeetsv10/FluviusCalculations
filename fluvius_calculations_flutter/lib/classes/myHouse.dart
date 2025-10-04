@@ -9,6 +9,15 @@ class House extends ChangeNotifier {
   Battery battery = Battery();
   GridData grid_data = GridData();
 
+  List<double> import_energy_history =
+      []; // List to store import energy history
+  List<double> export_energy_history =
+      []; // List to store export energy history
+  double import_cost = 0.0;
+  double export_revenue = 0.0;
+  double energy_cost = 0.0;
+  double optimal_battery_capacity = 0.0;
+
   void updateParameters({
     String? newLocation,
     double? newInjectionPrice,
@@ -42,5 +51,41 @@ class House extends ChangeNotifier {
       'battery': battery.toJson(),
       'grid_data': grid_data.toJson(),
     };
+  }
+
+  void handlePythonResponse(Map<String, dynamic> simulationResponse) {
+    if (simulationResponse.containsKey('import_energy_history')) {
+      import_energy_history = List<double>.from(
+        simulationResponse['import_energy_history'],
+      );
+    }
+    if (simulationResponse.containsKey('export_energy_history')) {
+      export_energy_history = List<double>.from(
+        simulationResponse['export_energy_history'],
+      );
+    }
+    if (simulationResponse.containsKey('export_energy_history')) {
+      export_energy_history = List<double>.from(
+        simulationResponse['export_energy_history'],
+      );
+    }
+    if (simulationResponse.containsKey('soc_history')) {
+      battery.SOC_history = List<double>.from(
+        simulationResponse['soc_history'],
+      );
+    }
+    if (simulationResponse.containsKey('import_cost')) {
+      import_cost = simulationResponse['import_cost'];
+    }
+    if (simulationResponse.containsKey('export_revenue')) {
+      export_revenue = simulationResponse['export_revenue'];
+    }
+    if (simulationResponse.containsKey('energy_cost')) {
+      energy_cost = simulationResponse['energy_cost'];
+    }
+    if (simulationResponse.containsKey('optimal_capacity')) {
+      optimal_battery_capacity = simulationResponse['optimal_battery_capacity'];
+    }
+    notifyListeners();
   }
 }

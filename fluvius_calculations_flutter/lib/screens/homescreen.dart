@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluvius_calculations_flutter/classes/apiService.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
@@ -18,6 +19,70 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   bool _isLoading = false; // Loading state for Load Data
   bool _isBrowsing = false; // Loading state for Browse button
+  bool _isTestingAPI = false; // Loading state for API test
+
+  Future<void> testAPI() async {
+    setState(() {
+      _isTestingAPI = true;
+    });
+
+    try {
+      final response = await ApiService.testConnection();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ API Test Success: ${response['message']}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('❌ API Test Failed: $e'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      setState(() {
+        _isTestingAPI = false;
+      });
+    }
+  }
+
+  Future<void> processData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    if (Provider.of<GridData>(context, listen: false).csvFileBytes == null) {
+      showMyDialog(
+        'No CSV Selected',
+        'Please select a CSV file in the Grid Data section before sending data.',
+        context,
+      );
+
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+    try {
+      final house = context.read<House>();
+      final response = await ApiService.sendHouseData(house);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? 'Success!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+    } finally {
+      _isLoading = false;
+      setState(() {});
+    }
+  }
 
   Future<void> simulateHousehold() async {
     // Placeholder for simulate functionality
@@ -70,12 +135,46 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 20),
 
                 // --- Debug / Print JSON ---
-                TextButton(
+                ElevatedButton(
                   onPressed: () {
                     print(Provider.of<House>(context, listen: false).toJson());
                   },
                   child: const Text('Print House JSON'),
                 ),
+
+                ElevatedButton(
+                  onPressed: _isTestingAPI ? null : testAPI,
+                  child: Wrap(
+                    children: [
+                      _isTestingAPI
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.wifi_protected_setup),
+                      Text(
+                        _isTestingAPI ? 'Testing...' : '🔧 Test API Connection',
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Functional buttons
+                ElevatedButton(
+                  onPressed: processData,
+                  child: const Text('1. Process Data'),
+                ),
+                ElevatedButton(
+                  onPressed: null,
+                  child: const Text('2. Simulate Household (TBD)'),
+                ),
+                ElevatedButton(
+                  onPressed: null,
+                  child: const Text('3. Optimize Battery (TBD)'),
+                ),
+                const SizedBox(height: 20),
               ],
             ),
           ),

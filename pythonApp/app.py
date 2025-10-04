@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 
 import io
 import base64
+import uvicorn
 
 # Import your simplified classes
 from classes.myHouse import House
@@ -20,7 +21,7 @@ from classes.myFluviusData import FluviusData
 # ---------------------------
 # FastAPI app
 # ---------------------------
-app = FastAPI(title="FluviusCalculations API")
+app = FastAPI(title="Home Battery Sizing Tool API")
 
 # Add CORS middleware to allow Flutter web requests
 app.add_middleware(
@@ -42,28 +43,26 @@ grid_data: Optional[FluviusData] = None
 today = date.today()
 seven_days_ago = today - timedelta(days=7)
 
-class SimulationRequest(BaseModel):
-    # Dates
-    start_date: Optional[str] = seven_days_ago.isoformat()
-    end_date: Optional[str] = today.isoformat()
-    
+class SimulationRequest(BaseModel):   
     # House parameters
     location: Optional[str] = ""
     injection_price: Optional[float] = 0.04
     price_per_kWh: Optional[float] = 0.35
     
     # Battery parameters
-    battery_capacity: Optional[float] = 0.0
-    battery_lifetime: Optional[int] = 10
-    price_per_kWh_battery: Optional[float] = 700
+    max_capacity: Optional[float] = 0.0
     efficiency: Optional[float] = 0.95
+    fixed_costs: Optional[float] = 1000  # in €
+    variable_cost: Optional[float] = 700  # in €/kWh
+    battery_lifetime: Optional[int] = 10
     C_rate: Optional[float] = 0.25 / 4
-    dynamic: Optional[bool] = False
     
     # FluviusData parameters
     flag_EV: Optional[bool] = True
     flag_PV: Optional[bool] = True
     EAN_ID: Optional[int] = -1
+    start_date: Optional[str] = seven_days_ago.isoformat()
+    end_date: Optional[str] = today.isoformat()
     file_path: Optional[str] = None  # optional file path if needed
     csv_data: Optional[str] = None  # CSV file content as base64 string
 
@@ -81,7 +80,7 @@ class SimulationResponse(BaseModel):
 # ---------------------------
 @app.get("/")
 def root():
-    return {"message": "FluviusCalculations API is running! - v1.0.1"}
+    return {"message": "FluviusCalculations API is running! - v1.1.0"}
 
 # ---------------------------
 # Load data once
@@ -243,3 +242,7 @@ def plot_data(request: SimulationRequest):
         print(f"❌ Error in plot_data: {e}")
         print(f"Full traceback: {traceback.format_exc()}")
         return {"error": f"Plotting failed: {str(e)}"}
+    
+# --- Run Server ---
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

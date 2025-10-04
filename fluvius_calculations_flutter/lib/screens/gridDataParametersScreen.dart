@@ -236,6 +236,7 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Theme.of(context).colorScheme.primary,
                         minimumSize: const Size.fromHeight(50),
+                        overlayColor: Colors.white,
                       ),
                       onPressed: () async {
                         try {

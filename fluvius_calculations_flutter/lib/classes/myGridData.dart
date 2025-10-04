@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 
 class GridData extends ChangeNotifier {
@@ -12,8 +12,6 @@ class GridData extends ChangeNotifier {
   int EAN_ID = -1;
   late String start_date;
   late String end_date;
-  // DataTable df = DataTable(columns: [], rows: []);
-
   PlatformFile? selectedFile; // Store the selected file
   Uint8List? csvFileBytes; // Store CSV file bytes
 
@@ -28,6 +26,8 @@ class GridData extends ChangeNotifier {
   DateTime stringToDateTime(String dateStr) {
     return DateFormat("dd-MM-yyyy").parse(dateStr);
   }
+
+  String get csvDataBase64 => base64Encode(csvFileBytes!);
 
   Future<bool> pickFiles() async {
     try {
@@ -109,12 +109,12 @@ class GridData extends ChangeNotifier {
   Map<String, dynamic> toJson() {
     return {
       'file_path': file_path,
-      'file_name': file_name,
       'flag_EV': flag_EV,
       'flag_PV': flag_PV,
       'EAN_ID': EAN_ID,
       'start_date': start_date,
       'end_date': end_date,
+      'csv_data': csvDataBase64,
     };
   }
 }

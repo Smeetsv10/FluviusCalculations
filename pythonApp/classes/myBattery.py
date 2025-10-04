@@ -3,10 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 class Battery:
-    def __init__(self, max_capacity, efficiency=0.95, price_per_kWh=700, battery_lifetime=10, C_rate=0.25/4):
+    def __init__(self, max_capacity, efficiency=0.95, fixed_costs=1000, variable_cost=700, battery_lifetime=10, C_rate=0.25/4):
         self.max_capacity = max_capacity # (kWh)
         self.efficiency = efficiency # (-)
-        self.price_per_kWh = price_per_kWh
+        self.fixed_costs = fixed_costs
+        self.variable_cost = variable_cost
         self.battery_lifetime = battery_lifetime # (years)
         self.C_rate = C_rate # == (1/h)
         
@@ -17,7 +18,7 @@ class Battery:
         assert self.max_capacity >= 0, "Max capacity must be non-negative"
 
     def battery_cost(self):
-        return self.price_per_kWh * self.max_capacity
+        return self.variable_cost * self.max_capacity + self.fixed_costs
 
     def current_capacity(self):
         ''' Calculate current capacity of the battery (kWh)'''
