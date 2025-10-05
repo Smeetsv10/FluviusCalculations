@@ -164,7 +164,90 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
                     selected: gridData.end_date,
                   ),
                   const SizedBox(height: 16),
-                  // File path + Load CSV button remain unchanged...
+
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // File path display (takes 4x space)
+                      Expanded(
+                        flex: 4,
+                        child: TextField(
+                          readOnly: true,
+                          controller: TextEditingController(
+                            text: gridData.file_path.isEmpty
+                                ? 'No file selected'
+                                : gridData.file_path,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Selected CSV File',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 8,
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: gridData.file_path.isEmpty
+                                ? Colors.grey
+                                : Colors.black,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+
+                      // Load CSV button (takes 1x space)
+                      Expanded(
+                        flex: 1,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            minimumSize: const Size.fromHeight(50),
+                            overlayColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            if (gridData.isLoading) {
+                              return;
+                            } else {
+                              try {
+                                final success = await gridData.pickFiles();
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '✅ File loaded successfully',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('⚠️ No file selected'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('❌ Error: $e'),
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text(
+                            'Load CSV File',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
