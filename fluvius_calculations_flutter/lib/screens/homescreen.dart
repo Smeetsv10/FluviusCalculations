@@ -199,51 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     TextButton(
                       onPressed: gridData.isLoading ? null : processData,
-                      style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
-                        backgroundColor: gridData.isLoading
-                            ? Colors.green[200]
-                            : Colors.green[700],
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 250),
-                        transitionBuilder: (child, animation) =>
-                            FadeTransition(opacity: animation, child: child),
-                        child: gridData.isLoading
-                            ? Row(
-                                key: const ValueKey('loading'),
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  SizedBox(width: 8),
-                                  Text(
-                                    'Processing...',
-                                    style: TextStyle(color: Colors.white),
-                                  ),
-                                ],
-                              )
-                            : const Text(
-                                'Process Data',
-                                key: ValueKey('text'),
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                      ),
+                      child: const Text('Process Data'),
                     ),
                     TextButton(
                       onPressed: gridData.isLoading ? null : visualizeData,
