@@ -180,7 +180,7 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
             "Battery Parameters",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          initiallyExpanded: true,
+          initiallyExpanded: false,
           tilePadding: EdgeInsets.zero,
           children: [
             Padding(

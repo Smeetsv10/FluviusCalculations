@@ -17,6 +17,10 @@ class House extends ChangeNotifier {
   double export_revenue = 0.0;
   double energy_cost = 0.0;
   double optimal_battery_capacity = 0.0;
+  List<double> capacity_array = [];
+  List<double> savings_list = [];
+  List<double> annualized_battery_cost_array = [];
+  String base64Figure = ''; // Base64 string for the plot image
 
   void updateParameters({
     String? newLocation,
@@ -30,6 +34,10 @@ class House extends ChangeNotifier {
     double? newExportRevenue,
     double? newEnergyCost,
     double? newOptimalBatteryCapacity,
+    List<double>? capacity_array,
+    List<double>? savings_list,
+    List<double>? annualized_battery_cost_array,
+    String? base64Figure,
   }) {
     if (newLocation != null) {
       location = newLocation;
@@ -63,6 +71,18 @@ class House extends ChangeNotifier {
     }
     if (newOptimalBatteryCapacity != null) {
       optimal_battery_capacity = newOptimalBatteryCapacity;
+    }
+    if (capacity_array != null) {
+      capacity_array = capacity_array;
+    }
+    if (savings_list != null) {
+      savings_list = savings_list;
+    }
+    if (annualized_battery_cost_array != null) {
+      annualized_battery_cost_array = annualized_battery_cost_array;
+    }
+    if (base64Figure != null) {
+      base64Figure = base64Figure;
     }
     notifyListeners();
   }

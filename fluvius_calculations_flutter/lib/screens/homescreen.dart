@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/apiService.dart';
-import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
@@ -19,17 +16,35 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isBrowsing = false; // Loading state for Browse button
-  bool _isTestingAPI = false; // Loading state for API test
+  bool _isTestingAPI = false;
+
+  Future<void> _withLoading(Future<void> Function() action) async {
+    final gridData = context.read<GridData>();
+    if (gridData.csvFileBytes == null) {
+      showMyDialog(
+        'No CSV Selected',
+        'Please select a CSV file in the Grid Data section before sending data.',
+        context,
+      );
+      return;
+    }
+
+    setState(() => gridData.isLoading = true);
+    try {
+      await action();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+    } finally {
+      setState(() => gridData.isLoading = false);
+    }
+  }
 
   Future<void> testAPI() async {
-    setState(() {
-      _isTestingAPI = true;
-    });
-
+    setState(() => _isTestingAPI = true);
     try {
       final response = await ApiService.testConnection();
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('✅ API Test Success: ${response['message']}'),
@@ -46,139 +61,72 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isTestingAPI = false;
-      });
+      setState(() => _isTestingAPI = false);
     }
   }
 
-  Future<void> processData() async {
-    Provider.of<GridData>(context, listen: false).isLoading = true;
-    if (Provider.of<GridData>(context, listen: false).csvFileBytes == null) {
-      showMyDialog(
-        'No CSV Selected',
-        'Please select a CSV file in the Grid Data section before sending data.',
-        context,
-      );
+  Future<void> processData() async => _withLoading(() async {
+    final house = context.read<House>();
+    final response = await ApiService.sendHouseData(house);
 
-      Provider.of<GridData>(context, listen: false).isLoading = false;
-      return;
+    if (response['data_info']?['date_range'] != null) {
+      final startDate = DateTime.parse(
+        response['data_info']['date_range']['start'],
+      );
+      final endDate = DateTime.parse(
+        response['data_info']['date_range']['end'],
+      );
+      context.read<GridData>().updateParameters(
+        newStartDate: startDate,
+        newEndDate: endDate,
+        newMinStartDate: startDate,
+        newMaxEndDate: endDate,
+      );
+      setState(() {});
     }
-    try {
-      final house = context.read<House>();
-      final response = await ApiService.sendHouseData(house);
-      print(response);
 
-      // process response and update House state
-      if (response['data_info'] != null &&
-          response['data_info']['date_range'] != null) {
-        DateTime startDate = DateTime.parse(
-          response['data_info']['date_range']['start'],
-        );
-        DateTime endDate = DateTime.parse(
-          response['data_info']['date_range']['end'],
-        );
-        Provider.of<GridData>(context, listen: false).updateParameters(
-          newStartDate: startDate,
-          newEndDate: endDate,
-          newMinStartDate: startDate,
-          newMaxEndDate: endDate,
-        );
-        setState(() {});
-      }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+  });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? 'Success!')),
-      );
-    } catch (e) {
+  Future<void> visualizeData() async => _withLoading(() async {
+    final house = context.read<House>();
+    final response = await ApiService.visualizeHouseData(house);
+    house.grid_data.base64Image = response['base64Figure'];
+    showPlotDialog(house.grid_data.base64Image, context);
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+  });
+
+  Future<void> simulateHousehold() async => _withLoading(() async {
+    final house = context.read<House>();
+    final response = await ApiService.simulateHouse(house);
+
+    if (response.containsKey('error')) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-    } finally {
-      Provider.of<GridData>(context, listen: false).isLoading = false;
-    }
-  }
-
-  Future<void> vizualizeData() async {
-    void _showPlotDialog(String base64Image) {
-      showDialog(
-        context: context,
-        builder: (context) => Dialog(
-          child: Container(
-            width: 800,
-            height: 600,
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                const Text(
-                  'Data Visualization',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: Image.memory(
-                    base64Decode(base64Image),
-                    fit: BoxFit.contain,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      );
-    }
-
-    Provider.of<GridData>(context, listen: false).isLoading = true;
-    if (Provider.of<GridData>(context, listen: false).csvFileBytes == null) {
-      showMyDialog(
-        'No CSV Selected',
-        'Please select a CSV file in the Grid Data section before sending data.',
-        context,
-      );
-      Provider.of<GridData>(context, listen: false).isLoading = false;
+      ).showSnackBar(SnackBar(content: Text(response['error'])));
       return;
     }
-    try {
-      final house = context.read<House>();
-      final response = await ApiService.vizualizeHouseData(house);
 
-      house.grid_data.base64Image = response['plot_data'];
-      _showPlotDialog(house.grid_data.base64Image);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response['message'] ?? 'Success!')),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
-    } finally {
-      Provider.of<GridData>(context, listen: false).isLoading = false;
-    }
-  }
-
-  Future<void> simulateHousehold() async {
-    // Placeholder for simulate functionality
-    showMyDialog(
-      'Not Implemented',
-      'Simulate household functionality not yet implemented.',
+    ApiService.handlePythonResponse(response, house);
+    ScaffoldMessenger.of(
       context,
-    );
-  }
+    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+  });
 
-  Future<void> optimizeBattery() async {
-    // Placeholder for optimize functionality
-    showMyDialog(
-      'Not Implemented',
-      'Optimize battery functionality not yet implemented.',
+  Future<void> optimizeBattery() async => _withLoading(() async {
+    final house = context.read<House>();
+    final response = await ApiService.optimizeBattery(house);
+    ApiService.handlePythonResponse(response, house);
+
+    ScaffoldMessenger.of(
       context,
-    );
-  }
+    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -204,26 +152,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // --- House Parameters Section ---
                     const HouseParameterScreen(),
                     const SizedBox(height: 20),
-                    // --- Battery Parameters Section ---
                     const BatteryParameterScreen(),
                     const SizedBox(height: 20),
-                    // --- Grid Data Parameters Section ---
                     const GridDataParameterScreen(),
                     const SizedBox(height: 20),
-
-                    // --- Debug / Print JSON ---
                     ElevatedButton(
-                      onPressed: () {
-                        print(
-                          Provider.of<House>(context, listen: false).toJson(),
-                        );
-                      },
+                      onPressed: () => print(context.read<House>().toJson()),
                       child: const Text('Print House JSON'),
                     ),
-
                     ElevatedButton(
                       onPressed: _isTestingAPI ? null : testAPI,
                       child: Wrap(
@@ -246,23 +184,32 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // Functional buttons
+                    Divider(),
+                    const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: processData,
                       child: const Text('Process Data'),
                     ),
                     ElevatedButton(
-                      onPressed: vizualizeData,
+                      onPressed: visualizeData,
                       child: const Text('Visualize Data'),
                     ),
                     ElevatedButton(
-                      onPressed: null,
-                      child: const Text('Simulate Household (TBD)'),
+                      onPressed: simulateHousehold,
+                      child: const Text('Simulate Household'),
                     ),
                     ElevatedButton(
-                      onPressed: null,
-                      child: const Text('Optimize Battery (TBD)'),
+                      onPressed: () {
+                        showPlotDialog(
+                          context.read<House>().base64Figure,
+                          context,
+                        );
+                      },
+                      child: const Text('Plot Simulation Results'),
+                    ),
+                    ElevatedButton(
+                      onPressed: optimizeBattery,
+                      child: const Text('Optimize Battery'),
                     ),
                     const SizedBox(height: 20),
                   ],

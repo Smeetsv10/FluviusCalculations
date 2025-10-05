@@ -94,7 +94,7 @@ class _HouseParameterScreenState extends State<HouseParameterScreen> {
             "House Parameters",
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          initiallyExpanded: true,
+          initiallyExpanded: false,
           tilePadding: EdgeInsets.zero,
           children: [
             Padding(

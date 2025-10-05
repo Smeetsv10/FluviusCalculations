@@ -115,7 +115,7 @@ class House:
             self.battery.SOC_history.append(self.battery.SOC)
 
         return self.import_energy_history, self.export_energy_history
-
+    
     def optimize_battery_capacity(self, max_capacity_kwh=10):
         total_cost_array = []
         annualized_battery_cost_array = []
@@ -295,5 +295,4 @@ class House:
         axes[1].set_ylabel('Frequency')
         axes[1].grid(True)
 
-        plt.tight_layout()
         return fig

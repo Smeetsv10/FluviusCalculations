@@ -1,19 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
 from pydantic import BaseModel
 from typing import List, Optional
-
 from datetime import date, timedelta
 import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-
 import io
 import base64
 import uvicorn
 
-# Import your simplified classes
 from classes.myHouse import House
 from classes.myBattery import Battery
 from classes.myFluviusData import FluviusData
@@ -23,31 +19,29 @@ from classes.myFluviusData import FluviusData
 # ---------------------------
 app = FastAPI(title="Home Battery Sizing Tool API")
 
-# Add CORS middleware to allow Flutter web requests
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your Flutter app's domain
+    allow_origins=["*"],  # In production, restrict origins
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ---------------------------
-# Global variable for grid data
+# Globals
 # ---------------------------
 grid_data: Optional[FluviusData] = None
+house: Optional[House] = None
 
 # ---------------------------
-# Request/Response Models
+# Pydantic Models
 # ---------------------------
-today = date.today()
-seven_days_ago = today - timedelta(days=7)
-
-
 class BatteryRequest(BaseModel):
     max_capacity: float = 0.0
     efficiency: float = 0.95
     variable_cost: float = 700
+    fixed_costs: float = 1000
     battery_lifetime: int = 10
     C_rate: float = 0.25
 
@@ -56,8 +50,8 @@ class GridDataRequest(BaseModel):
     flag_EV: bool = True
     flag_PV: bool = True
     EAN_ID: int = -1
-    start_date: Optional[str] = None
-    end_date: Optional[str] = None
+    start_date: Optional[str] = (date.today()- timedelta(days=7)).isoformat()
+    end_date: Optional[str] = date.today().isoformat()
     csv_data: Optional[str] = None
 
 class HouseRequest(BaseModel):
@@ -66,184 +60,172 @@ class HouseRequest(BaseModel):
     price_per_kWh: float = 0.35
     battery: BatteryRequest
     grid_data: GridDataRequest
-    
+
 class SimulationResponse(BaseModel):
-    import_energy: List[float]
-    export_energy: List[float]
-    soc_history: List[float]
-    import_cost: float
-    export_revenue: float
-    energy_cost: float
-    optimal_capacity: Optional[float] = None
+    import_energy: List[float] = []
+    export_energy: List[float] = []
+    soc_history: List[float] = []
+    import_cost: float = 0.0
+    export_revenue: float = 0.0
+    energy_cost: float = 0.0
+    optimal_capacity: Optional[float] = 0
+    capacity_array: List[float] = []
+    savings_list: List[float] = []
+    annualized_battery_cost_array: List[float] = []
+    base64Figure: Optional[str] = ""
+    message: Optional[str] = ""
+    data_info: Optional[dict] = {}
 
 # ---------------------------
-# Root endpoint
+# Utility Functions
+# ---------------------------
+def plot_to_base64(fig) -> str:
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
+    buffer.seek(0)
+    img_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+    buffer.close()
+    plt.close(fig)
+    return img_str
+
+# ---------------------------
+# Routes
 # ---------------------------
 @app.get("/")
 def root():
     return {"message": "FluviusCalculations API is running! - v1.1.0"}
 
-# ---------------------------
-# Load data once
-# ---------------------------
-@app.post("/load_data")
+@app.post("/load_data", response_model=SimulationResponse)
 def load_data(request: HouseRequest):
     global grid_data
     try:
-        # Initialize grid_data
         grid_data = FluviusData()
+        csv_data = request.grid_data.csv_data
+        if not csv_data:
+            return SimulationResponse(message="csv_data is required")
 
-        # Validate required fields
-        if request.grid_data.csv_data is None or request.grid_data.csv_data == "":
-            return {"error": f"csv_data field is required and cannot be empty: {request.grid_data.csv_data}"}
-
-        # Set FluviusData parameters
-        grid_data.start_date = request.grid_data.start_date if isinstance(request.grid_data.start_date, str) else seven_days_ago.isoformat()
-        grid_data.end_date = request.grid_data.end_date if isinstance(request.grid_data.end_date, str) else today.isoformat()
+        # Set grid_data parameters
+        grid_data.start_date = request.grid_data.start_date
+        grid_data.end_date = request.grid_data.end_date        
         grid_data.flag_EV = request.grid_data.flag_EV
         grid_data.flag_PV = request.grid_data.flag_PV
         grid_data.EAN_ID = request.grid_data.EAN_ID
         grid_data.file_path = request.grid_data.file_path
 
-        print("📊 Loading CSV data from bytes...")
-        data = grid_data.load_csv_from_bytes(request.grid_data.csv_data)
-
-        grid_data.load_data(data)
+        # Load and process CSV
+        df = grid_data.load_csv_from_bytes(csv_data)
+        grid_data.load_data(df)
         grid_data.process_data()
-        
+
         if grid_data.df.empty:
-            return {"error": "Failed to load data or dataframe is empty"}
-        
-        print(f"✅ Data loaded: {len(grid_data.df)} rows, columns: {list(grid_data.df.columns)}")
-        
-        # Safely get date range info
-        date_range_info = {"start": None, "end": None}
-        if 'datetime' in grid_data.df.columns:
-            try:
-                date_range_info = {
-                    "start": grid_data.df['datetime'].min().isoformat(),
-                    "end": grid_data.df['datetime'].max().isoformat()
-                }
-            except Exception as e:
-                print(f"⚠️ Warning: Could not extract date range: {e}")
-        
-        return {
-            "message": "Data loaded and processed successfully",
-            "data_info": {
-                "records": len(grid_data.df),
-                "date_range": date_range_info,
+            return SimulationResponse(message="Dataframe is empty after loading")
 
-            }
+        date_range = {
+            "start": grid_data.df['datetime'].min().isoformat() if 'datetime' in grid_data.df.columns else None,
+            "end": grid_data.df['datetime'].max().isoformat() if 'datetime' in grid_data.df.columns else None
         }
-        
-    except Exception as e:
-        print(f"❌ Error in load_data: {e}")
-        import traceback
-        print(f"Full traceback: {traceback.format_exc()}")
-        return {"error": f"Failed to load data: {str(e)}"}
 
-# ---------------------------
-# Simulate household using preloaded grid data
-# ---------------------------
+        return SimulationResponse(
+            message="Data loaded successfully",
+            data_info={
+                "num_records": len(grid_data.df),
+                "date_range": date_range,
+            }
+        )
+
+    except Exception as e:
+        return SimulationResponse(message=f"Failed to load data: {e}")
+
 @app.post("/simulate", response_model=SimulationResponse)
 def simulate_household(request: HouseRequest):
-    global grid_data
+    global grid_data, house
+    
     if grid_data is None:
-        return {"error": "Grid data not loaded. Call /load_data first."}
-
-    # Create House with Battery
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
     house = House(
-        battery=Battery(max_capacity=request.battery.max_capacity, 
-                        efficiency=request.battery.efficiency,
-                        price_per_kWh=request.battery.price_per_kWh,
-                        battery_lifetime=request.battery.battery_lifetime,
-                        C_rate=request.battery.C_rate),
+        battery=Battery(
+            max_capacity=request.battery.max_capacity,
+            efficiency=request.battery.efficiency,
+            variable_cost=request.battery.variable_cost,
+            fixed_costs=request.battery.fixed_costs,
+            battery_lifetime=request.battery.battery_lifetime,
+            C_rate=request.battery.C_rate,
+        ),
         grid_data=grid_data,
         injection_price=request.injection_price,
         price_per_kWh=request.price_per_kWh
-        
     )
 
     try:
         import_energy, export_energy = house.simulate_household()
+        return SimulationResponse(
+            import_energy=import_energy,
+            export_energy=export_energy,
+            soc_history=house.battery.SOC_history,
+            import_cost=house.import_cost,
+            export_revenue=house.export_revenue,
+            energy_cost=house.energy_cost,
+            message="Simulation completed successfully"
+        )
+
     except Exception as e:
-        return {"error": f"Simulation failed: {e}"}
+        return SimulationResponse(message=f"Simulation failed: {e}")
 
-    return SimulationResponse(
-        import_energy=import_energy,
-        export_energy=export_energy,
-        soc_history=house.battery.SOC_history,
-        import_cost=house.import_cost,
-        export_revenue=house.export_revenue,
-        energy_cost=house.energy_cost
-    )
-
-# ---------------------------
-# Optimize battery capacity
-# ---------------------------
 @app.post("/optimize", response_model=SimulationResponse)
 def optimize_battery(request: HouseRequest):
-    global grid_data
+    global grid_data, house
     if grid_data is None:
-        return {"error": "Grid data not loaded. Call /load_data first."}
-
-    house = House(
-        battery=Battery(max_capacity=request.battery.max_capacity, 
-                        efficiency=request.battery.efficiency,
-                        price_per_kWh=request.battery.price_per_kWh,
-                        battery_lifetime=request.battery.battery_lifetime,
-                        C_rate=request.battery.C_rate),
-        grid_data=grid_data
-    )
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+    if house is None:
+         return SimulationResponse(message="House not initialized. Call /simulate first.")
 
     try:
-        house.optimize_battery_capacity()
+        capacity_array, savings_list, annualized_battery_cost_array = house.optimize_battery_capacity()
+        return SimulationResponse(
+            import_energy=house.import_energy_history,
+            export_energy=house.export_energy_history,
+            soc_history=house.battery.SOC_history,
+            import_cost=house.import_cost,
+            export_revenue=house.export_revenue,
+            energy_cost=house.energy_cost,
+            optimal_capacity=house.optimal_battery_capacity,
+            capacity_array=capacity_array,
+            savings_list=savings_list,
+            annualized_battery_cost_array=annualized_battery_cost_array
+        )
     except Exception as e:
-        return {"error": f"Optimization failed: {e}"}
+        return SimulationResponse(message=f"Optimization failed: {e}")
 
-    return SimulationResponse(
-        import_energy=house.import_energy_history,
-        export_energy=house.export_energy_history,
-        soc_history=house.battery.SOC_history,
-        import_cost=house.import_cost,
-        export_revenue=house.export_revenue,
-        energy_cost=house.energy_cost,
-        optimal_capacity=house.optimal_battery_capacity
-    )
-
-@app.post("/plot_data")
-def plot_data(request: HouseRequest):
-    global grid_data
+@app.post("plot_simulation", response_model=SimulationResponse)
+def plot_simulation():
+    global grid_data, house
     if grid_data is None:
-        return {"error": "Grid data not loaded. Call /load_data first."}
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+    if house is None:
+         return SimulationResponse(message="House not initialized. Call /simulate first.")
 
     try:
-        # Get the matplotlib figure from visualize_data
+        fig = house.plot_energy_history()
+        plot_b64 = plot_to_base64(fig)
+        return SimulationResponse(base64Figure=plot_b64)
+    except Exception as e:
+        return SimulationResponse(message=f"Plotting failed: {e}")
+
+
+@app.post("/plot_data", response_model=SimulationResponse)
+def plot_data():
+    if grid_data is None:
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+
+    try:
         fig = grid_data.visualize_data()
-        
-        # Convert the plot to a base64 string
-        buffer = io.BytesIO()
-        fig.savefig(buffer, format='png', dpi=150, bbox_inches='tight')
-        buffer.seek(0)
-        
-        # Encode to base64
-        plot_data_b64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        buffer.close()
-        
-        # Close the figure to free memory
-        plt.close(fig)
-        
-        return {
-            "message": "Plot generated successfully",
-            "plot_data": plot_data_b64
-        }
-        
+        plot_b64 = plot_to_base64(fig)
+        return SimulationResponse(base64Figure=plot_b64)
     except Exception as e:
-        import traceback
-        print(f"❌ Error in plot_data: {e}")
-        print(f"Full traceback: {traceback.format_exc()}")
-        return {"error": f"Plotting failed: {str(e)}"}
-    
-# --- Run Server ---
+        return SimulationResponse(message=f"Plotting failed: {e}")
+
+# ---------------------------
+# Run server
+# ---------------------------
 if __name__ == "__main__":
     uvicorn.run("app:app", host="0.0.0.0", port=8000, reload=True)

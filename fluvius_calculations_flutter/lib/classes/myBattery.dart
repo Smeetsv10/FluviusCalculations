@@ -75,6 +75,7 @@ class Battery extends ChangeNotifier {
       'efficiency': efficiency,
       'SOC': SOC,
       'variable_cost': variable_cost,
+      'fixed_costs': fixed_costs,
       'battery_lifetime': battery_lifetime,
       'C_rate': C_rate,
     };
