@@ -40,6 +40,7 @@ class Battery extends ChangeNotifier {
     double? newVariableCost,
     int? newBatteryLifetime,
     double? newCRate,
+    List<double>? newSOCHistory,
   }) {
     if (newMaxCapacity != null) {
       max_capacity = newMaxCapacity;
@@ -61,6 +62,9 @@ class Battery extends ChangeNotifier {
     }
     if (newCRate != null) {
       C_rate = newCRate;
+    }
+    if (newSOCHistory != null) {
+      SOC_history = newSOCHistory;
     }
     notifyListeners();
   }

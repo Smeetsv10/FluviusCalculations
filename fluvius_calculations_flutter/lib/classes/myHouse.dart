@@ -24,6 +24,12 @@ class House extends ChangeNotifier {
     double? newPricePerKWh,
     Battery? newBattery,
     GridData? newGridData,
+    List<double>? newImportEnergyHistory,
+    List<double>? newExportEnergyHistory,
+    double? newImportCost,
+    double? newExportRevenue,
+    double? newEnergyCost,
+    double? newOptimalBatteryCapacity,
   }) {
     if (newLocation != null) {
       location = newLocation;
@@ -40,6 +46,24 @@ class House extends ChangeNotifier {
     if (newGridData != null) {
       grid_data = newGridData;
     }
+    if (newImportEnergyHistory != null) {
+      import_energy_history = newImportEnergyHistory;
+    }
+    if (newExportEnergyHistory != null) {
+      export_energy_history = newExportEnergyHistory;
+    }
+    if (newImportCost != null) {
+      import_cost = newImportCost;
+    }
+    if (newExportRevenue != null) {
+      export_revenue = newExportRevenue;
+    }
+    if (newEnergyCost != null) {
+      energy_cost = newEnergyCost;
+    }
+    if (newOptimalBatteryCapacity != null) {
+      optimal_battery_capacity = newOptimalBatteryCapacity;
+    }
     notifyListeners();
   }
 
@@ -51,41 +75,5 @@ class House extends ChangeNotifier {
       'battery': battery.toJson(),
       'grid_data': grid_data.toJson(),
     };
-  }
-
-  void handlePythonResponse(Map<String, dynamic> simulationResponse) {
-    if (simulationResponse.containsKey('import_energy_history')) {
-      import_energy_history = List<double>.from(
-        simulationResponse['import_energy_history'],
-      );
-    }
-    if (simulationResponse.containsKey('export_energy_history')) {
-      export_energy_history = List<double>.from(
-        simulationResponse['export_energy_history'],
-      );
-    }
-    if (simulationResponse.containsKey('export_energy_history')) {
-      export_energy_history = List<double>.from(
-        simulationResponse['export_energy_history'],
-      );
-    }
-    if (simulationResponse.containsKey('soc_history')) {
-      battery.SOC_history = List<double>.from(
-        simulationResponse['soc_history'],
-      );
-    }
-    if (simulationResponse.containsKey('import_cost')) {
-      import_cost = simulationResponse['import_cost'];
-    }
-    if (simulationResponse.containsKey('export_revenue')) {
-      export_revenue = simulationResponse['export_revenue'];
-    }
-    if (simulationResponse.containsKey('energy_cost')) {
-      energy_cost = simulationResponse['energy_cost'];
-    }
-    if (simulationResponse.containsKey('optimal_capacity')) {
-      optimal_battery_capacity = simulationResponse['optimal_battery_capacity'];
-    }
-    notifyListeners();
   }
 }

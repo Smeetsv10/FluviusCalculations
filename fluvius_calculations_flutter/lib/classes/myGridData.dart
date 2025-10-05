@@ -10,23 +10,43 @@ class GridData extends ChangeNotifier {
   bool flag_EV = true;
   bool flag_PV = true;
   int EAN_ID = -1;
-  late String start_date;
-  late String end_date;
+  late DateTime start_date; // iso format
+  late DateTime end_date; // iso format
   PlatformFile? selectedFile; // Store the selected file
   Uint8List? csvFileBytes; // Store CSV file bytes
 
   bool isLoading = false;
+  String base64Image = '';
+  DateTime? max_end_date = null;
+  DateTime? min_start_date = null;
 
   GridData() {
-    start_date = DateFormat(
-      'dd-MM-yyyy',
-    ).format(DateTime.now().subtract(Duration(days: 7)));
-    end_date = DateFormat('dd-MM-yyyy').format(DateTime.now());
+    start_date = getRoundedDateTime(DateTime.now()).subtract(Duration(days: 7));
+    end_date = getRoundedDateTime(DateTime.now());
   }
 
   // Getter for SOC
-  DateTime stringToDateTime(String dateStr) {
-    return DateFormat("dd-MM-yyyy").parse(dateStr);
+  String get formattedStartDate =>
+      DateFormat('dd-MM-yyyy HH:mm').format(start_date);
+
+  String get formattedEndDate =>
+      DateFormat('dd-MM-yyyy HH:mm').format(end_date);
+
+  DateTime getRoundedDateTime(DateTime now) {
+    // Round to nearest 15 minutes
+    int minute = now.minute;
+    int roundedMinute = ((minute / 15).round() * 15) % 60;
+    int hour = now.hour + ((minute / 15).round() * 15 ~/ 60);
+
+    // Handle hour overflow (e.g. 23:59 rounds to 00:00 next day)
+    if (hour >= 24) {
+      now = now.add(const Duration(days: 1));
+      hour = 0;
+    }
+
+    final rounded = DateTime(now.year, now.month, now.day, hour, roundedMinute);
+
+    return rounded;
   }
 
   String get csvDataBase64 =>
@@ -91,9 +111,11 @@ class GridData extends ChangeNotifier {
     bool? newFlagEV,
     bool? newFlagPV,
     int? newEANID,
-    String? newStartDate,
-    String? newEndDate,
+    DateTime? newStartDate,
+    DateTime? newEndDate,
     Uint8List? newCsvFileBytes,
+    DateTime? newMinStartDate,
+    DateTime? newMaxEndDate,
   }) {
     if (newFilePath != null) {
       file_path = newFilePath;
@@ -116,6 +138,12 @@ class GridData extends ChangeNotifier {
     if (newEndDate != null) {
       end_date = newEndDate;
     }
+    if (newMinStartDate != null) {
+      min_start_date = newMinStartDate;
+    }
+    if (newMaxEndDate != null) {
+      max_end_date = newMaxEndDate;
+    }
     notifyListeners();
   }
 
@@ -125,8 +153,8 @@ class GridData extends ChangeNotifier {
       'flag_EV': flag_EV,
       'flag_PV': flag_PV,
       'EAN_ID': EAN_ID,
-      'start_date': start_date,
-      'end_date': end_date,
+      'start_date': formattedStartDate,
+      'end_date': formattedEndDate,
       'csv_data': csvDataBase64,
     };
   }

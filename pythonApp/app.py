@@ -43,29 +43,30 @@ grid_data: Optional[FluviusData] = None
 today = date.today()
 seven_days_ago = today - timedelta(days=7)
 
-class SimulationRequest(BaseModel):   
-    # House parameters
-    location: Optional[str] = ""
-    injection_price: Optional[float] = 0.04
-    price_per_kWh: Optional[float] = 0.35
-    
-    # Battery parameters
-    max_capacity: Optional[float] = 0.0
-    efficiency: Optional[float] = 0.95
-    fixed_costs: Optional[float] = 1000  # in €
-    variable_cost: Optional[float] = 700  # in €/kWh
-    battery_lifetime: Optional[int] = 10
-    C_rate: Optional[float] = 0.25 / 4
-    
-    # FluviusData parameters
-    flag_EV: Optional[bool] = True
-    flag_PV: Optional[bool] = True
-    EAN_ID: Optional[int] = -1
-    start_date: Optional[str] = seven_days_ago.isoformat()
-    end_date: Optional[str] = today.isoformat()
-    file_path: Optional[str] = None  # optional file path if needed
-    csv_data: Optional[str] = None  # CSV file content as base64 string
 
+class BatteryRequest(BaseModel):
+    max_capacity: float = 0.0
+    efficiency: float = 0.95
+    variable_cost: float = 700
+    battery_lifetime: int = 10
+    C_rate: float = 0.25
+
+class GridDataRequest(BaseModel):
+    file_path: Optional[str] = None
+    flag_EV: bool = True
+    flag_PV: bool = True
+    EAN_ID: int = -1
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    csv_data: Optional[str] = None
+
+class HouseRequest(BaseModel):
+    location: Optional[str] = ""
+    injection_price: float = 0.04
+    price_per_kWh: float = 0.35
+    battery: BatteryRequest
+    grid_data: GridDataRequest
+    
 class SimulationResponse(BaseModel):
     import_energy: List[float]
     export_energy: List[float]
@@ -86,27 +87,27 @@ def root():
 # Load data once
 # ---------------------------
 @app.post("/load_data")
-def load_data(request: SimulationRequest):
+def load_data(request: HouseRequest):
     global grid_data
     try:
         # Initialize grid_data
         grid_data = FluviusData()
-        
+
         # Validate required fields
-        if request.csv_data is None or request.csv_data == "":
-            return {"error": "csv_data field is required and cannot be empty"}
-        
+        if request.grid_data.csv_data is None or request.grid_data.csv_data == "":
+            return {"error": f"csv_data field is required and cannot be empty: {request.grid_data.csv_data}"}
+
         # Set FluviusData parameters
-        grid_data.start_date = request.start_date if isinstance(request.start_date, str) else seven_days_ago.isoformat()
-        grid_data.end_date = request.end_date if isinstance(request.end_date, str) else today.isoformat()
-        grid_data.flag_EV = request.flag_EV
-        grid_data.flag_PV = request.flag_PV
-        grid_data.EAN_ID = request.EAN_ID
-        grid_data.file_path = request.file_path
-        
+        grid_data.start_date = request.grid_data.start_date if isinstance(request.grid_data.start_date, str) else seven_days_ago.isoformat()
+        grid_data.end_date = request.grid_data.end_date if isinstance(request.grid_data.end_date, str) else today.isoformat()
+        grid_data.flag_EV = request.grid_data.flag_EV
+        grid_data.flag_PV = request.grid_data.flag_PV
+        grid_data.EAN_ID = request.grid_data.EAN_ID
+        grid_data.file_path = request.grid_data.file_path
+
         print("📊 Loading CSV data from bytes...")
-        data = grid_data.load_csv_from_bytes(request.csv_data)
-        
+        data = grid_data.load_csv_from_bytes(request.grid_data.csv_data)
+
         grid_data.load_data(data)
         grid_data.process_data()
         
@@ -120,8 +121,8 @@ def load_data(request: SimulationRequest):
         if 'datetime' in grid_data.df.columns:
             try:
                 date_range_info = {
-                    "start": grid_data.df['datetime'].min().strftime('%Y-%m-%d %H:%M:%S'),
-                    "end": grid_data.df['datetime'].max().strftime('%Y-%m-%d %H:%M:%S')
+                    "start": grid_data.df['datetime'].min().isoformat(),
+                    "end": grid_data.df['datetime'].max().isoformat()
                 }
             except Exception as e:
                 print(f"⚠️ Warning: Could not extract date range: {e}")
@@ -145,18 +146,18 @@ def load_data(request: SimulationRequest):
 # Simulate household using preloaded grid data
 # ---------------------------
 @app.post("/simulate", response_model=SimulationResponse)
-def simulate_household(request: SimulationRequest):
+def simulate_household(request: HouseRequest):
     global grid_data
     if grid_data is None:
         return {"error": "Grid data not loaded. Call /load_data first."}
 
     # Create House with Battery
     house = House(
-        battery=Battery(max_capacity=request.battery_capacity, 
-                        efficiency=request.efficiency,
-                        price_per_kWh=request.price_per_kWh_battery,
-                        battery_lifetime=request.battery_lifetime,
-                        C_rate=request.C_rate),
+        battery=Battery(max_capacity=request.battery.max_capacity, 
+                        efficiency=request.battery.efficiency,
+                        price_per_kWh=request.battery.price_per_kWh,
+                        battery_lifetime=request.battery.battery_lifetime,
+                        C_rate=request.battery.C_rate),
         grid_data=grid_data,
         injection_price=request.injection_price,
         price_per_kWh=request.price_per_kWh
@@ -181,17 +182,17 @@ def simulate_household(request: SimulationRequest):
 # Optimize battery capacity
 # ---------------------------
 @app.post("/optimize", response_model=SimulationResponse)
-def optimize_battery(request: SimulationRequest):
+def optimize_battery(request: HouseRequest):
     global grid_data
     if grid_data is None:
         return {"error": "Grid data not loaded. Call /load_data first."}
 
     house = House(
-        battery=Battery(max_capacity=request.battery_capacity, 
-                        efficiency=request.efficiency,
-                        price_per_kWh=request.price_per_kWh_battery,
-                        battery_lifetime=request.battery_lifetime,
-                        C_rate=request.C_rate),
+        battery=Battery(max_capacity=request.battery.max_capacity, 
+                        efficiency=request.battery.efficiency,
+                        price_per_kWh=request.battery.price_per_kWh,
+                        battery_lifetime=request.battery.battery_lifetime,
+                        C_rate=request.battery.C_rate),
         grid_data=grid_data
     )
 
@@ -211,7 +212,7 @@ def optimize_battery(request: SimulationRequest):
     )
 
 @app.post("/plot_data")
-def plot_data(request: SimulationRequest):
+def plot_data(request: HouseRequest):
     global grid_data
     if grid_data is None:
         return {"error": "Grid data not loaded. Call /load_data first."}

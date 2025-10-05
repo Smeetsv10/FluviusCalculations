@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/apiService.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
@@ -65,6 +67,88 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final house = context.read<House>();
       final response = await ApiService.sendHouseData(house);
+      print(response);
+
+      // process response and update House state
+      if (response['data_info'] != null &&
+          response['data_info']['date_range'] != null) {
+        DateTime startDate = DateTime.parse(
+          response['data_info']['date_range']['start'],
+        );
+        DateTime endDate = DateTime.parse(
+          response['data_info']['date_range']['end'],
+        );
+        Provider.of<GridData>(context, listen: false).updateParameters(
+          newStartDate: startDate,
+          newEndDate: endDate,
+          newMinStartDate: startDate,
+          newMaxEndDate: endDate,
+        );
+        setState(() {});
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response['message'] ?? 'Success!')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+    } finally {
+      Provider.of<GridData>(context, listen: false).isLoading = false;
+    }
+  }
+
+  Future<void> vizualizeData() async {
+    void _showPlotDialog(String base64Image) {
+      showDialog(
+        context: context,
+        builder: (context) => Dialog(
+          child: Container(
+            width: 800,
+            height: 600,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                const Text(
+                  'Data Visualization',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: Image.memory(
+                    base64Decode(base64Image),
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    Provider.of<GridData>(context, listen: false).isLoading = true;
+    if (Provider.of<GridData>(context, listen: false).csvFileBytes == null) {
+      showMyDialog(
+        'No CSV Selected',
+        'Please select a CSV file in the Grid Data section before sending data.',
+        context,
+      );
+      Provider.of<GridData>(context, listen: false).isLoading = false;
+      return;
+    }
+    try {
+      final house = context.read<House>();
+      final response = await ApiService.vizualizeHouseData(house);
+
+      house.grid_data.base64Image = response['plot_data'];
+      _showPlotDialog(house.grid_data.base64Image);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(response['message'] ?? 'Success!')),
@@ -166,15 +250,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     // Functional buttons
                     ElevatedButton(
                       onPressed: processData,
-                      child: const Text('1. Process Data'),
+                      child: const Text('Process Data'),
+                    ),
+                    ElevatedButton(
+                      onPressed: vizualizeData,
+                      child: const Text('Visualize Data'),
                     ),
                     ElevatedButton(
                       onPressed: null,
-                      child: const Text('2. Simulate Household (TBD)'),
+                      child: const Text('Simulate Household (TBD)'),
                     ),
                     ElevatedButton(
                       onPressed: null,
-                      child: const Text('3. Optimize Battery (TBD)'),
+                      child: const Text('Optimize Battery (TBD)'),
                     ),
                     const SizedBox(height: 20),
                   ],
