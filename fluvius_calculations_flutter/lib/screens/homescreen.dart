@@ -17,7 +17,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isLoading = false; // Loading state for Load Data
   bool _isBrowsing = false; // Loading state for Browse button
   bool _isTestingAPI = false; // Loading state for API test
 
@@ -52,9 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> processData() async {
-    setState(() {
-      _isLoading = true;
-    });
+    Provider.of<GridData>(context, listen: false).isLoading = true;
     if (Provider.of<GridData>(context, listen: false).csvFileBytes == null) {
       showMyDialog(
         'No CSV Selected',
@@ -62,9 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
       );
 
-      setState(() {
-        _isLoading = false;
-      });
+      Provider.of<GridData>(context, listen: false).isLoading = false;
       return;
     }
     try {
@@ -79,8 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context,
       ).showSnackBar(SnackBar(content: Text('Failed: $e')));
     } finally {
-      _isLoading = false;
-      setState(() {});
+      Provider.of<GridData>(context, listen: false).isLoading = false;
     }
   }
 
@@ -112,73 +106,83 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
       ),
-      body: Stack(
-        children: [
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // --- House Parameters Section ---
-                const HouseParameterScreen(),
-                const SizedBox(height: 20),
-                // --- Battery Parameters Section ---
-                const BatteryParameterScreen(),
-                const SizedBox(height: 20),
-                // --- Grid Data Parameters Section ---
-                const GridDataParameterScreen(),
-                const SizedBox(height: 20),
-
-                // --- Debug / Print JSON ---
-                ElevatedButton(
-                  onPressed: () {
-                    print(Provider.of<House>(context, listen: false).toJson());
-                  },
-                  child: const Text('Print House JSON'),
+      body: Consumer<GridData>(
+        builder: (context, gridData, child) {
+          return Stack(
+            children: [
+              if (gridData.isLoading)
+                Container(
+                  color: const Color.fromARGB(69, 0, 0, 0),
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
+              SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // --- House Parameters Section ---
+                    const HouseParameterScreen(),
+                    const SizedBox(height: 20),
+                    // --- Battery Parameters Section ---
+                    const BatteryParameterScreen(),
+                    const SizedBox(height: 20),
+                    // --- Grid Data Parameters Section ---
+                    const GridDataParameterScreen(),
+                    const SizedBox(height: 20),
 
-                ElevatedButton(
-                  onPressed: _isTestingAPI ? null : testAPI,
-                  child: Wrap(
-                    children: [
-                      _isTestingAPI
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.wifi_protected_setup),
-                      Text(
-                        _isTestingAPI ? 'Testing...' : '🔧 Test API Connection',
+                    // --- Debug / Print JSON ---
+                    ElevatedButton(
+                      onPressed: () {
+                        print(
+                          Provider.of<House>(context, listen: false).toJson(),
+                        );
+                      },
+                      child: const Text('Print House JSON'),
+                    ),
+
+                    ElevatedButton(
+                      onPressed: _isTestingAPI ? null : testAPI,
+                      child: Wrap(
+                        children: [
+                          _isTestingAPI
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.wifi_protected_setup),
+                          Text(
+                            _isTestingAPI
+                                ? 'Testing...'
+                                : '🔧 Test API Connection',
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
+                    ),
+                    const SizedBox(height: 12),
 
-                // Functional buttons
-                ElevatedButton(
-                  onPressed: processData,
-                  child: const Text('1. Process Data'),
+                    // Functional buttons
+                    ElevatedButton(
+                      onPressed: processData,
+                      child: const Text('1. Process Data'),
+                    ),
+                    ElevatedButton(
+                      onPressed: null,
+                      child: const Text('2. Simulate Household (TBD)'),
+                    ),
+                    ElevatedButton(
+                      onPressed: null,
+                      child: const Text('3. Optimize Battery (TBD)'),
+                    ),
+                    const SizedBox(height: 20),
+                  ],
                 ),
-                ElevatedButton(
-                  onPressed: null,
-                  child: const Text('2. Simulate Household (TBD)'),
-                ),
-                ElevatedButton(
-                  onPressed: null,
-                  child: const Text('3. Optimize Battery (TBD)'),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ],
+              ),
+            ],
+          );
+        },
       ),
     );
   }

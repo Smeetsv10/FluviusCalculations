@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
+import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:provider/provider.dart';
 
 class GridDataParameterScreen extends StatefulWidget {
@@ -140,140 +141,153 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final gridData = Provider.of<GridData>(context, listen: false);
-
-    return ExpansionTile(
-      title: const Text(
-        "Grid Data Parameters",
-        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-      ),
-      initiallyExpanded: true,
-      tilePadding: EdgeInsets.zero,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // --- Start Date ---
-              buildDateDropdown(
-                title: 'Start Date (DD-MM-YYYY)',
-                selectedDay: startDay,
-                selectedMonth: startMonth,
-                selectedYear: startYear,
-                onDayChanged: (v) => setState(() {
-                  startDay = v;
-                  gridData.start_date = '$startDay-$startMonth-$startYear';
-                }),
-                onMonthChanged: (v) => setState(() {
-                  startMonth = v;
-                  gridData.start_date = '$startDay-$startMonth-$startYear';
-                }),
-                onYearChanged: (v) => setState(() {
-                  startYear = v;
-                  gridData.start_date = '$startDay-$startMonth-$startYear';
-                }),
-              ),
-              const SizedBox(height: 16),
-
-              // --- End Date ---
-              buildDateDropdown(
-                title: 'End Date (DD-MM-YYYY)',
-                selectedDay: endDay,
-                selectedMonth: endMonth,
-                selectedYear: endYear,
-                onDayChanged: (v) => setState(() {
-                  endDay = v;
-                  gridData.end_date = '$endDay-$endMonth-$endYear';
-                }),
-                onMonthChanged: (v) => setState(() {
-                  endMonth = v;
-                  gridData.end_date = '$endDay-$endMonth-$endYear';
-                }),
-                onYearChanged: (v) => setState(() {
-                  endYear = v;
-                  gridData.end_date = '$endDay-$endMonth-$endYear';
-                }),
-              ),
-              const SizedBox(height: 16),
-
-              // --- File path + button row ---
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+    return Consumer<GridData>(
+      builder: (context, gridData, child) {
+        return ExpansionTile(
+          title: const Text(
+            "Grid Data Parameters",
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          initiallyExpanded: true,
+          tilePadding: EdgeInsets.zero,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // File path display (takes 4x space)
-                  Expanded(
-                    flex: 4,
-                    child: TextField(
-                      readOnly: true,
-                      controller: TextEditingController(
-                        text: gridData.file_path.isEmpty
-                            ? 'No file selected'
-                            : gridData.file_path,
-                      ),
-                      decoration: const InputDecoration(
-                        labelText: 'Selected CSV File',
-                        border: OutlineInputBorder(),
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 8,
+                  // --- Start Date ---
+                  buildDateDropdown(
+                    title: 'Start Date (DD-MM-YYYY)',
+                    selectedDay: startDay,
+                    selectedMonth: startMonth,
+                    selectedYear: startYear,
+                    onDayChanged: (v) => setState(() {
+                      startDay = v;
+                      gridData.start_date = '$startDay-$startMonth-$startYear';
+                    }),
+                    onMonthChanged: (v) => setState(() {
+                      startMonth = v;
+                      gridData.start_date = '$startDay-$startMonth-$startYear';
+                    }),
+                    onYearChanged: (v) => setState(() {
+                      startYear = v;
+                      gridData.start_date = '$startDay-$startMonth-$startYear';
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- End Date ---
+                  buildDateDropdown(
+                    title: 'End Date (DD-MM-YYYY)',
+                    selectedDay: endDay,
+                    selectedMonth: endMonth,
+                    selectedYear: endYear,
+                    onDayChanged: (v) => setState(() {
+                      endDay = v;
+                      gridData.end_date = '$endDay-$endMonth-$endYear';
+                    }),
+                    onMonthChanged: (v) => setState(() {
+                      endMonth = v;
+                      gridData.end_date = '$endDay-$endMonth-$endYear';
+                    }),
+                    onYearChanged: (v) => setState(() {
+                      endYear = v;
+                      gridData.end_date = '$endDay-$endMonth-$endYear';
+                    }),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // --- File path + button row ---
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // File path display (takes 4x space)
+                      Expanded(
+                        flex: 4,
+                        child: TextField(
+                          readOnly: true,
+                          controller: TextEditingController(
+                            text: gridData.file_path.isEmpty
+                                ? 'No file selected'
+                                : gridData.file_path,
+                          ),
+                          decoration: const InputDecoration(
+                            labelText: 'Selected CSV File',
+                            border: OutlineInputBorder(),
+                            isDense: true,
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: 12,
+                              horizontal: 8,
+                            ),
+                          ),
+                          style: TextStyle(
+                            color: gridData.file_path.isEmpty
+                                ? Colors.grey
+                                : Colors.black,
+                          ),
                         ),
                       ),
-                      style: TextStyle(
-                        color: gridData.file_path.isEmpty
-                            ? Colors.grey
-                            : Colors.black,
+                      const SizedBox(width: 16),
+
+                      // Load CSV button (takes 1x space)
+                      Expanded(
+                        flex: 1,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.primary,
+                            minimumSize: const Size.fromHeight(50),
+                            overlayColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            if (gridData.isLoading) {
+                              return;
+                            } else {
+                              try {
+                                final success = await gridData.pickFiles();
+                                if (success) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '✅ File loaded successfully',
+                                      ),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('⚠️ No file selected'),
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('❌ Error: $e'),
+                                    duration: const Duration(seconds: 4),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: const Text(
+                            'Load CSV File',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-
-                  // Load CSV button (takes 1x space)
-                  Expanded(
-                    flex: 1,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        minimumSize: const Size.fromHeight(50),
-                        overlayColor: Colors.white,
-                      ),
-                      onPressed: () async {
-                        try {
-                          final success = await gridData.pickFiles();
-
-                          if (!mounted) return;
-
-                          if (!success) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('No file selected.'),
-                              ),
-                            );
-                          }
-                          setState(() {
-                            // Refresh UI to show selected file path
-                          });
-                        } catch (e) {
-                          if (!mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Error selecting file: $e')),
-                          );
-                        }
-                      },
-                      child: const Text(
-                        'Load CSV File',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ],
+            ),
+          ],
+        );
+      },
     );
   }
 }

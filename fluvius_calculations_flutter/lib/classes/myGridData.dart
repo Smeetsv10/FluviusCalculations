@@ -15,6 +15,8 @@ class GridData extends ChangeNotifier {
   PlatformFile? selectedFile; // Store the selected file
   Uint8List? csvFileBytes; // Store CSV file bytes
 
+  bool isLoading = false;
+
   GridData() {
     start_date = DateFormat(
       'dd-MM-yyyy',
@@ -27,10 +29,14 @@ class GridData extends ChangeNotifier {
     return DateFormat("dd-MM-yyyy").parse(dateStr);
   }
 
-  String get csvDataBase64 => base64Encode(csvFileBytes!);
+  String get csvDataBase64 =>
+      csvFileBytes != null ? base64Encode(csvFileBytes!) : '';
 
   Future<bool> pickFiles() async {
     try {
+      isLoading = true;
+      notifyListeners();
+
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['csv'],
@@ -60,13 +66,20 @@ class GridData extends ChangeNotifier {
           }
         }
 
+        isLoading = false;
+        notifyListeners();
+
         return true;
       } else {
         print('🔍 No file selected');
+        isLoading = false;
+        notifyListeners();
         return false;
       }
     } catch (e) {
       print('❌ Error picking file: $e');
+      isLoading = false;
+      notifyListeners();
       // Propagate the error
       throw Exception('Failed to select file: $e');
     }
