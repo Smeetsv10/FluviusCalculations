@@ -169,11 +169,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 20),
                     const GridDataParameterScreen(),
                     const SizedBox(height: 20),
-                    ElevatedButton(
+                    TextButton(
                       onPressed: () => print(context.read<House>().toJson()),
                       child: const Text('Print House JSON'),
                     ),
-                    ElevatedButton(
+                    TextButton(
                       onPressed: _isTestingAPI ? null : testAPI,
                       child: Wrap(
                         children: [
@@ -198,23 +198,25 @@ class _HomeScreenState extends State<HomeScreen> {
                     Divider(),
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed: processData,
+                      onPressed: gridData.isLoading ? null : processData,
                       child: const Text('Process Data'),
                     ),
                     TextButton(
-                      onPressed: visualizeData,
+                      onPressed: gridData.isLoading ? null : visualizeData,
                       child: const Text('Visualize Data'),
                     ),
-                    ElevatedButton(
-                      onPressed: simulateHousehold,
+                    TextButton(
+                      onPressed: gridData.isLoading ? null : simulateHousehold,
                       child: const Text('Simulate Household'),
                     ),
-                    ElevatedButton(
-                      onPressed: visualizeSimulation,
+                    TextButton(
+                      onPressed: gridData.isLoading
+                          ? null
+                          : visualizeSimulation,
                       child: const Text('Plot Simulation Results'),
                     ),
-                    ElevatedButton(
-                      onPressed: optimizeBattery,
+                    TextButton(
+                      onPressed: gridData.isLoading ? null : optimizeBattery,
                       child: const Text('Optimize Battery'),
                     ),
                     const SizedBox(height: 20),
