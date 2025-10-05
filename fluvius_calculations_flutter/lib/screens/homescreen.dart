@@ -197,11 +197,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 12),
                     Divider(),
                     const SizedBox(height: 12),
-                    ElevatedButton(
+                    TextButton(
                       onPressed: processData,
                       child: const Text('Process Data'),
                     ),
-                    ElevatedButton(
+                    TextButton(
                       onPressed: visualizeData,
                       child: const Text('Visualize Data'),
                     ),

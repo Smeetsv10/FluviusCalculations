@@ -14,11 +14,11 @@ void main() {
         ChangeNotifierProvider<House>(create: (_) => House()),
         ChangeNotifierProxyProvider<House, GridData>(
           create: (_) => GridData(),
-          update: (_, house, __) => house.grid_data,
+          update: (_, house, _) => house.grid_data,
         ),
         ChangeNotifierProxyProvider<House, Battery>(
           create: (_) => Battery(),
-          update: (_, house, __) => house.battery,
+          update: (_, house, _) => house.battery,
         ),
       ],
       child: const MainApp(),

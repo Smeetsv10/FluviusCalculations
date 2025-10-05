@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
-import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
 import 'package:provider/provider.dart';
 
 class GridDataParameterScreen extends StatefulWidget {
@@ -63,7 +62,7 @@ class _GridDataParameterScreenState extends State<GridDataParameterScreen> {
           }) => SizedBox(
             width: width,
             child: DropdownButtonFormField<int>(
-              value: value,
+              initialValue: value,
               isDense: true,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
