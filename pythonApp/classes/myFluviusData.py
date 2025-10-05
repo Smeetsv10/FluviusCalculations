@@ -135,7 +135,7 @@ class FluviusData:
             # data is provided directly and does not need to be read from file
             self.df_raw = data
 
-        data = self.apply_data_flags(data) # Only applies for open data Fluvius
+        # data = self.apply_data_flags(data) # Only applies for open data Fluvius
     
         # Convert time column to datetime for better processing
         data['datetime'] = pd.to_datetime(data['Datum_Startuur'])           # CET format

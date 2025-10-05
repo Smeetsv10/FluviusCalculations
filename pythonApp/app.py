@@ -9,6 +9,9 @@ import matplotlib.pyplot as plt
 import io
 import base64
 import uvicorn
+import uuid
+from typing import Dict
+
 
 from classes.myHouse import House
 from classes.myBattery import Battery
@@ -31,6 +34,8 @@ app.add_middleware(
 # ---------------------------
 # Globals
 # ---------------------------
+sessions: Dict[str, dict] = {}
+
 grid_data: Optional[FluviusData] = None
 house: Optional[House] = None
 
@@ -60,6 +65,10 @@ class HouseRequest(BaseModel):
     price_per_kWh: float = 0.35
     battery: BatteryRequest
     grid_data: GridDataRequest
+    
+class SessionRequest(BaseModel):
+    session_id: str
+    house: HouseRequest
 
 class SimulationResponse(BaseModel):
     import_energy: List[float] = []
@@ -97,14 +106,12 @@ def root():
 
 @app.post("/load_data", response_model=SimulationResponse)
 def load_data(request: HouseRequest):
-    global grid_data
     try:
-        grid_data = FluviusData()
         csv_data = request.grid_data.csv_data
         if not csv_data:
             return SimulationResponse(message="csv_data is required")
 
-        # Set grid_data parameters
+        grid_data = FluviusData()
         grid_data.start_date = request.grid_data.start_date
         grid_data.end_date = request.grid_data.end_date        
         grid_data.flag_EV = request.grid_data.flag_EV
@@ -112,7 +119,6 @@ def load_data(request: HouseRequest):
         grid_data.EAN_ID = request.grid_data.EAN_ID
         grid_data.file_path = request.grid_data.file_path
 
-        # Load and process CSV
         df = grid_data.load_csv_from_bytes(csv_data)
         grid_data.load_data(df)
         grid_data.process_data()
@@ -120,14 +126,19 @@ def load_data(request: HouseRequest):
         if grid_data.df.empty:
             return SimulationResponse(message="Dataframe is empty after loading")
 
+        # Create session
+        session_id = str(uuid.uuid4())
+        sessions[session_id] = {"grid_data": grid_data, "house": None}
+
         date_range = {
-            "start": grid_data.df['datetime'].min().isoformat() if 'datetime' in grid_data.df.columns else None,
-            "end": grid_data.df['datetime'].max().isoformat() if 'datetime' in grid_data.df.columns else None
+            "start": grid_data.df['datetime'].min().isoformat(),
+            "end": grid_data.df['datetime'].max().isoformat()
         }
 
         return SimulationResponse(
             message="Data loaded successfully",
             data_info={
+                "session_id": session_id,
                 "num_records": len(grid_data.df),
                 "date_range": date_range,
             }
@@ -135,6 +146,7 @@ def load_data(request: HouseRequest):
 
     except Exception as e:
         return SimulationResponse(message=f"Failed to load data: {e}")
+
 
 @app.post("/simulate", response_model=SimulationResponse)
 def simulate_household(request: HouseRequest):

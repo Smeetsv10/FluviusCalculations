@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
+import 'package:fluvius_calculations_flutter/classes/myUser.dart';
 import 'package:fluvius_calculations_flutter/screens/homescreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ void main() {
   runApp(
     MultiProvider(
       providers: [
+        Provider<User>(create: (_) => User()),
         ChangeNotifierProvider<House>(create: (_) => House()),
         ChangeNotifierProxyProvider<House, GridData>(
           create: (_) => GridData(),
