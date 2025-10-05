@@ -128,6 +128,17 @@ class _HomeScreenState extends State<HomeScreen> {
     ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
   });
 
+  Future<void> visualizeSimulation() async => _withLoading(() async {
+    final house = context.read<House>();
+    final response = await ApiService.visualizeSimulation(house);
+    house.grid_data.base64Image = response['base64Figure'];
+    showPlotDialog(house.grid_data.base64Image, context);
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+  });
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -199,12 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: const Text('Simulate Household'),
                     ),
                     ElevatedButton(
-                      onPressed: () {
-                        showPlotDialog(
-                          context.read<House>().base64Figure,
-                          context,
-                        );
-                      },
+                      onPressed: visualizeSimulation,
                       child: const Text('Plot Simulation Results'),
                     ),
                     ElevatedButton(

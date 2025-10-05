@@ -73,7 +73,7 @@ class SimulationResponse(BaseModel):
     savings_list: List[float] = []
     annualized_battery_cost_array: List[float] = []
     base64Figure: Optional[str] = ""
-    message: Optional[str] = ""
+    message: Optional[str] = None
     data_info: Optional[dict] = {}
 
 # ---------------------------
@@ -196,7 +196,7 @@ def optimize_battery(request: HouseRequest):
     except Exception as e:
         return SimulationResponse(message=f"Optimization failed: {e}")
 
-@app.post("plot_simulation", response_model=SimulationResponse)
+@app.post("/plot_simulation", response_model=SimulationResponse)
 def plot_simulation():
     global grid_data, house
     if grid_data is None:

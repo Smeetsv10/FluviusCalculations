@@ -58,6 +58,8 @@ class ApiService {
       post('simulate', house.toJson());
   static Future<Map<String, dynamic>> optimizeBattery(House house) =>
       post('optimize', house.toJson());
+  static Future<Map<String, dynamic>> visualizeSimulation(House house) =>
+      post('plot_simulation', house.toJson());
 
   // Handle Python response
   static void handlePythonResponse(Map<String, dynamic> response, House house) {
