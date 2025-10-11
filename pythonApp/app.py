@@ -106,6 +106,7 @@ def root():
 
 @app.post("/load_data", response_model=SimulationResponse)
 def load_data(request: HouseRequest):
+    global grid_data, house
     try:
         csv_data = request.grid_data.csv_data
         if not csv_data:
@@ -219,13 +220,23 @@ def plot_simulation():
     try:
         fig = house.plot_energy_history()
         plot_b64 = plot_to_base64(fig)
-        return SimulationResponse(base64Figure=plot_b64)
+        return SimulationResponse(
+                import_energy=house.import_energy_history,
+                export_energy=house.export_energy_history,
+                soc_history=house.battery.SOC_history,
+                import_cost=house.import_cost,
+                export_revenue=house.export_revenue,
+                energy_cost=house.energy_cost,
+                message="Plotting completed successfully",
+                base64Figure=plot_b64
+            )
     except Exception as e:
         return SimulationResponse(message=f"Plotting failed: {e}")
 
 
 @app.post("/plot_data", response_model=SimulationResponse)
 def plot_data():
+    global grid_data, house
     if grid_data is None:
         return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
 
