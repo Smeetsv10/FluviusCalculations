@@ -82,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> visualizeData() async => _withLoading(() async {
     final house = context.read<House>();
     final response = await ApiService.visualizeHouseData(house);
-    showMyDialog('title', house.grid_data.base64Image, context);
     showPlotDialog(house.grid_data.base64Image, context);
 
     ScaffoldMessenger.of(

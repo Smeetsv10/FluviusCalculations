@@ -164,13 +164,19 @@ SnackBar mySnackBar(
   String message, {
   Duration duration = const Duration(milliseconds: 999),
 }) {
+  Color bgColor;
+  if (message.toLowerCase().contains('error')) {
+    bgColor = Colors.red[800]!;
+  } else {
+    bgColor = Colors.green[800]!;
+  }
   return SnackBar(
     content: Text(
       message,
       textAlign: TextAlign.center,
       style: TextStyle(color: Colors.white),
     ),
-    backgroundColor: Colors.green[800]!,
+    backgroundColor: bgColor,
     behavior: SnackBarBehavior.floating,
     duration: duration,
     margin: const EdgeInsets.symmetric(horizontal: 16),

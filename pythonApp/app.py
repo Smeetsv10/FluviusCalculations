@@ -109,7 +109,7 @@ def load_data(request: HouseRequest):
     try:
         csv_data = request.grid_data.csv_data
         if not csv_data:
-            return SimulationResponse(message="csv_data is required")
+            return SimulationResponse(message="ERROR: csv_data is required")
 
         # Initialize house if it doesn't exist
         if house is None:
@@ -128,7 +128,7 @@ def load_data(request: HouseRequest):
         house.grid_data.process_data()
         
         if house.grid_data.df.empty:
-            return SimulationResponse(message="Dataframe is empty after loading")
+            return SimulationResponse(message="ERROR: Dataframe is empty after loading")
 
         # Create session
         session_id = str(uuid.uuid4())
@@ -149,27 +149,27 @@ def load_data(request: HouseRequest):
         )
 
     except Exception as e:
-        return SimulationResponse(message=f"Failed to load data: {e}")
+        return SimulationResponse(message=f"ERROR: Failed to load data: {e}")
 
 @app.post("/plot_data", response_model=SimulationResponse)
 def plot_data():
     global house
     if house is None or house.grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+        return SimulationResponse(message="ERROR: Grid data not loaded. Call /load_data first.")
 
     try:
         fig = house.grid_data.visualize_data()
         plot_b64 = plot_to_base64(fig)
         return SimulationResponse(base64GridDataFigure=plot_b64, message="Plotting completed successfully")
     except Exception as e:
-        return SimulationResponse(message=f"Plotting failed: {e}")
+        return SimulationResponse(message=f"ERROR: Plotting failed: {e}")
     
 @app.post("/simulate", response_model=SimulationResponse)
 def simulate_household(request: HouseRequest):
     global house
 
     if house.grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+        return SimulationResponse(message="ERROR: Grid data not loaded. Call /load_data first.")
     house = House(
         battery=Battery(
             max_capacity=request.battery.max_capacity,
