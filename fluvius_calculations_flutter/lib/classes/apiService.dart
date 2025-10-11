@@ -6,11 +6,21 @@ class ApiService {
   static const String baseUrl = 'http://127.0.0.1:8000';
 
   // Generic GET request
-  static Future<Map<String, dynamic>> get(String endpoint) async {
+  static Future<Map<String, dynamic>> get(
+    String endpoint, {
+    House? house,
+  }) async {
     final url = Uri.parse('$baseUrl/$endpoint');
     try {
       final response = await http.get(url);
-      return _handleResponse(response, "GET $endpoint");
+      final data = _handleResponse(response, "GET $endpoint");
+
+      // If house is provided, process the Python response
+      if (house != null) {
+        handlePythonResponse(data, house);
+      }
+
+      return data;
     } catch (e) {
       print('⚠️ GET request error: $e');
       rethrow;
@@ -18,7 +28,11 @@ class ApiService {
   }
 
   // Generic POST request
-  static Future<Map<String, dynamic>> post(String endpoint, Map body) async {
+  static Future<Map<String, dynamic>> post(
+    String endpoint,
+    Map body, {
+    House? house,
+  }) async {
     final url = Uri.parse('$baseUrl/$endpoint');
     try {
       final response = await http.post(
@@ -26,7 +40,14 @@ class ApiService {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
       );
-      return _handleResponse(response, "POST $endpoint");
+      final data = _handleResponse(response, "POST $endpoint");
+
+      // If house is provided, process the Python response
+      if (house != null) {
+        handlePythonResponse(data, house);
+      }
+
+      return data;
     } catch (e) {
       print('⚠️ POST request error: $e');
       rethrow;
@@ -51,15 +72,15 @@ class ApiService {
   // Specific API endpoints
   static Future<Map<String, dynamic>> testConnection() => get('');
   static Future<Map<String, dynamic>> sendHouseData(House house) =>
-      post('load_data', house.toJson());
+      post('load_data', house.toJson(), house: house);
   static Future<Map<String, dynamic>> visualizeHouseData(House house) =>
-      post('plot_data', house.toJson());
+      post('plot_data', house.toJson(), house: house);
   static Future<Map<String, dynamic>> simulateHouse(House house) =>
-      post('simulate', house.toJson());
+      post('simulate', house.toJson(), house: house);
   static Future<Map<String, dynamic>> optimizeBattery(House house) =>
-      post('optimize', house.toJson());
+      post('optimize', house.toJson(), house: house);
   static Future<Map<String, dynamic>> visualizeSimulation(House house) =>
-      post('plot_simulation', house.toJson());
+      post('plot_simulation', house.toJson(), house: house);
 
   // Handle Python response
   static void handlePythonResponse(Map<String, dynamic> response, House house) {
@@ -91,6 +112,7 @@ class ApiService {
       'annualized_battery_cost_array',
     );
     final base64Figure = _get<String>('base64Figure');
+    final base64GridDataFigure = _get<String>('base64GridDataFigure');
 
     house.updateParameters(
       newImportEnergyHistory: importEnergyHistory,
@@ -102,9 +124,9 @@ class ApiService {
       capacity_array: capacityArray,
       savings_list: savingsList,
       annualized_battery_cost_array: annualizedBatteryCostArray,
-      base64Figure: base64Figure,
+      newBase64Image: base64Figure,
     );
-
+    house.grid_data.updateParameters(newBase64Image: base64GridDataFigure);
     house.battery.updateParameters(newSOCHistory: socHistory);
   }
 }

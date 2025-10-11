@@ -33,9 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       await action();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
     } finally {
       setState(() => gridData.isLoading = false);
     }
@@ -45,21 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _isTestingAPI = true);
     try {
       final response = await ApiService.testConnection();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✅ API Test Success: ${response['message']}'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(mySnackBar('✅ API Test Success: ${response['message']}'));
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('❌ API Test Failed: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(mySnackBar('❌ API Test Failed: $e'));
     } finally {
       setState(() => _isTestingAPI = false);
     }
@@ -84,21 +74,20 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       setState(() {});
     }
-
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> visualizeData() async => _withLoading(() async {
     final house = context.read<House>();
     final response = await ApiService.visualizeHouseData(house);
-    house.grid_data.base64Image = response['base64Figure'];
+    showMyDialog('title', house.grid_data.base64Image, context);
     showPlotDialog(house.grid_data.base64Image, context);
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> simulateHousehold() async => _withLoading(() async {
@@ -106,44 +95,39 @@ class _HomeScreenState extends State<HomeScreen> {
     final response = await ApiService.simulateHouse(house);
 
     if (response.containsKey('error')) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(response['error'])));
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar(response['error']));
       return;
     }
 
-    ApiService.handlePythonResponse(response, house);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> optimizeBattery() async => _withLoading(() async {
     final house = context.read<House>();
     final response = await ApiService.optimizeBattery(house);
-    ApiService.handlePythonResponse(response, house);
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> visualizeSimulation() async => _withLoading(() async {
     final house = context.read<House>();
     dynamic response = {};
-    print(house.base64Figure);
-    print(house.base64Figure.isNotEmpty);
+
     if (house.base64Figure.isNotEmpty) {
       showPlotDialog(house.base64Figure, context);
     } else {
       response = await ApiService.visualizeSimulation(house);
-      house.grid_data.base64Image = response['base64Figure'];
+      house.updateParameters(newBase64Image: response['base64Figure']);
       showPlotDialog(house.grid_data.base64Image, context);
     }
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(response['message'] ?? 'Success!')));
+    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   @override

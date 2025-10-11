@@ -20,14 +20,6 @@ void showMyDialog(String title, String message, BuildContext context) {
 }
 
 void showPlotDialog(String base64Image, BuildContext context) {
-  // Clean the base64 string by removing data URL prefix if present
-  String cleanBase64 = base64Image;
-  if (base64Image.contains(',')) {
-    cleanBase64 = base64Image.split(',').last;
-  }
-
-  // Remove any whitespace or newlines
-  cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
   showDialog(
     context: context,
     builder: (context) => Dialog(
@@ -43,37 +35,10 @@ void showPlotDialog(String base64Image, BuildContext context) {
             ),
             const SizedBox(height: 16),
             Expanded(
-              child: cleanBase64.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'No image data available',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    )
-                  : Image.memory(
-                      base64Decode(cleanBase64),
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(
-                                Icons.error_outline,
-                                size: 48,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Failed to load image\nError: $error',
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(color: Colors.red),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+              child: Image.memory(
+                base64Decode(base64Image),
+                fit: BoxFit.contain,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -192,5 +157,22 @@ Widget buildField({
         ],
       ),
     ],
+  );
+}
+
+SnackBar mySnackBar(
+  String message, {
+  Duration duration = const Duration(milliseconds: 999),
+}) {
+  return SnackBar(
+    content: Text(
+      message,
+      textAlign: TextAlign.center,
+      style: TextStyle(color: Colors.white),
+    ),
+    backgroundColor: Colors.green[800]!,
+    behavior: SnackBarBehavior.floating,
+    duration: duration,
+    margin: const EdgeInsets.symmetric(horizontal: 16),
   );
 }

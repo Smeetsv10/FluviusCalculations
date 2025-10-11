@@ -116,6 +116,7 @@ class GridData extends ChangeNotifier {
     Uint8List? newCsvFileBytes,
     DateTime? newMinStartDate,
     DateTime? newMaxEndDate,
+    String? newBase64Image,
   }) {
     if (newFilePath != null) {
       file_path = newFilePath;
@@ -143,6 +144,12 @@ class GridData extends ChangeNotifier {
     }
     if (newMaxEndDate != null) {
       max_end_date = newMaxEndDate;
+    }
+    if (newCsvFileBytes != null) {
+      csvFileBytes = newCsvFileBytes;
+    }
+    if (newBase64Image != null) {
+      base64Image = newBase64Image;
     }
     notifyListeners();
   }

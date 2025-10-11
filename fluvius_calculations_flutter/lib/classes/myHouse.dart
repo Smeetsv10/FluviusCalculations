@@ -37,7 +37,7 @@ class House extends ChangeNotifier {
     List<double>? capacity_array,
     List<double>? savings_list,
     List<double>? annualized_battery_cost_array,
-    String? base64Figure,
+    String? newBase64Image,
   }) {
     if (newLocation != null) {
       location = newLocation;
@@ -81,8 +81,8 @@ class House extends ChangeNotifier {
     if (annualized_battery_cost_array != null) {
       annualized_battery_cost_array = annualized_battery_cost_array;
     }
-    if (base64Figure != null) {
-      base64Figure = base64Figure;
+    if (newBase64Image != null) {
+      base64Figure = newBase64Image;
     }
     notifyListeners();
   }

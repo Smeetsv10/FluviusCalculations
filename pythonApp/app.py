@@ -35,8 +35,6 @@ app.add_middleware(
 # Globals
 # ---------------------------
 sessions: Dict[str, dict] = {}
-
-grid_data: Optional[FluviusData] = None
 house: Optional[House] = None
 
 # ---------------------------
@@ -82,6 +80,7 @@ class SimulationResponse(BaseModel):
     savings_list: List[float] = []
     annualized_battery_cost_array: List[float] = []
     base64Figure: Optional[str] = ""
+    base64GridDataFigure: Optional[str] = ""
     message: Optional[str] = None
     data_info: Optional[dict] = {}
 
@@ -102,58 +101,74 @@ def plot_to_base64(fig) -> str:
 # ---------------------------
 @app.get("/")
 def root():
-    return {"message": "FluviusCalculations API is running! - v1.1.0"}
+    return SimulationResponse(message="Fluvious Home Battery Sizing Tool API is running.")
 
 @app.post("/load_data", response_model=SimulationResponse)
 def load_data(request: HouseRequest):
-    global grid_data, house
+    global house
     try:
         csv_data = request.grid_data.csv_data
         if not csv_data:
             return SimulationResponse(message="csv_data is required")
 
-        grid_data = FluviusData()
-        grid_data.start_date = request.grid_data.start_date
-        grid_data.end_date = request.grid_data.end_date        
-        grid_data.flag_EV = request.grid_data.flag_EV
-        grid_data.flag_PV = request.grid_data.flag_PV
-        grid_data.EAN_ID = request.grid_data.EAN_ID
-        grid_data.file_path = request.grid_data.file_path
+        # Initialize house if it doesn't exist
+        if house is None:
+            house = House()
+        
+        house.grid_data = FluviusData()
+        house.grid_data.start_date = request.grid_data.start_date
+        house.grid_data.end_date = request.grid_data.end_date
+        house.grid_data.flag_EV = request.grid_data.flag_EV
+        house.grid_data.flag_PV = request.grid_data.flag_PV
+        house.grid_data.EAN_ID = request.grid_data.EAN_ID
+        house.grid_data.file_path = request.grid_data.file_path
 
-        df = grid_data.load_csv_from_bytes(csv_data)
-        grid_data.load_data(df)
-        grid_data.process_data()
-
-        if grid_data.df.empty:
+        df = house.grid_data.load_csv_from_bytes(csv_data)
+        house.grid_data.load_data(df)
+        house.grid_data.process_data()
+        
+        if house.grid_data.df.empty:
             return SimulationResponse(message="Dataframe is empty after loading")
 
         # Create session
         session_id = str(uuid.uuid4())
-        sessions[session_id] = {"grid_data": grid_data, "house": None}
+        sessions[session_id] = {"house": house}
 
         date_range = {
-            "start": grid_data.df['datetime'].min().isoformat(),
-            "end": grid_data.df['datetime'].max().isoformat()
+            "start": house.grid_data.df['datetime'].min().isoformat(),
+            "end": house.grid_data.df['datetime'].max().isoformat()
         }
 
         return SimulationResponse(
             message="Data loaded successfully",
             data_info={
                 "session_id": session_id,
-                "num_records": len(grid_data.df),
+                "num_records": len(house.grid_data.df),
                 "date_range": date_range,
-            }
+            },
         )
 
     except Exception as e:
         return SimulationResponse(message=f"Failed to load data: {e}")
 
+@app.post("/plot_data", response_model=SimulationResponse)
+def plot_data():
+    global house
+    if house is None or house.grid_data is None:
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
 
+    try:
+        fig = house.grid_data.visualize_data()
+        plot_b64 = plot_to_base64(fig)
+        return SimulationResponse(base64GridDataFigure=plot_b64, message="Plotting completed successfully")
+    except Exception as e:
+        return SimulationResponse(message=f"Plotting failed: {e}")
+    
 @app.post("/simulate", response_model=SimulationResponse)
 def simulate_household(request: HouseRequest):
-    global grid_data, house
-    
-    if grid_data is None:
+    global house
+
+    if house.grid_data is None:
         return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
     house = House(
         battery=Battery(
@@ -164,7 +179,6 @@ def simulate_household(request: HouseRequest):
             battery_lifetime=request.battery.battery_lifetime,
             C_rate=request.battery.C_rate,
         ),
-        grid_data=grid_data,
         injection_price=request.injection_price,
         price_per_kWh=request.price_per_kWh
     )
@@ -178,19 +192,39 @@ def simulate_household(request: HouseRequest):
             import_cost=house.import_cost,
             export_revenue=house.export_revenue,
             energy_cost=house.energy_cost,
-            message="Simulation completed successfully"
+            message="Simulation completed successfully",
         )
 
     except Exception as e:
         return SimulationResponse(message=f"Simulation failed: {e}")
 
+@app.post("/plot_simulation", response_model=SimulationResponse)
+def plot_simulation():
+    global house
+    if house is None or house.grid_data is None:
+        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+
+    try:
+        fig = house.plot_energy_history()
+        plot_b64 = plot_to_base64(fig)
+        return SimulationResponse(
+                import_energy=house.import_energy_history,
+                export_energy=house.export_energy_history,
+                soc_history=house.battery.SOC_history,
+                import_cost=house.import_cost,
+                export_revenue=house.export_revenue,
+                energy_cost=house.energy_cost,
+                message="Plotting completed successfully",
+                base64Figure=plot_b64,
+            )
+    except Exception as e:
+        return SimulationResponse(message=f"Plotting failed: {e}")
+
 @app.post("/optimize", response_model=SimulationResponse)
 def optimize_battery(request: HouseRequest):
-    global grid_data, house
-    if grid_data is None:
+    global house
+    if house is None or house.grid_data is None:
         return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
-    if house is None:
-         return SimulationResponse(message="House not initialized. Call /simulate first.")
 
     try:
         capacity_array, savings_list, annualized_battery_cost_array = house.optimize_battery_capacity()
@@ -204,48 +238,12 @@ def optimize_battery(request: HouseRequest):
             optimal_capacity=house.optimal_battery_capacity,
             capacity_array=capacity_array,
             savings_list=savings_list,
-            annualized_battery_cost_array=annualized_battery_cost_array
+            annualized_battery_cost_array=annualized_battery_cost_array,
+            message="Optimization completed successfully",
         )
     except Exception as e:
         return SimulationResponse(message=f"Optimization failed: {e}")
 
-@app.post("/plot_simulation", response_model=SimulationResponse)
-def plot_simulation():
-    global grid_data, house
-    if grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
-    if house is None:
-         return SimulationResponse(message="House not initialized. Call /simulate first.")
-
-    try:
-        fig = house.plot_energy_history()
-        plot_b64 = plot_to_base64(fig)
-        return SimulationResponse(
-                import_energy=house.import_energy_history,
-                export_energy=house.export_energy_history,
-                soc_history=house.battery.SOC_history,
-                import_cost=house.import_cost,
-                export_revenue=house.export_revenue,
-                energy_cost=house.energy_cost,
-                message="Plotting completed successfully",
-                base64Figure=plot_b64
-            )
-    except Exception as e:
-        return SimulationResponse(message=f"Plotting failed: {e}")
-
-
-@app.post("/plot_data", response_model=SimulationResponse)
-def plot_data():
-    global grid_data, house
-    if grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
-
-    try:
-        fig = grid_data.visualize_data()
-        plot_b64 = plot_to_base64(fig)
-        return SimulationResponse(base64Figure=plot_b64)
-    except Exception as e:
-        return SimulationResponse(message=f"Plotting failed: {e}")
 
 # ---------------------------
 # Run server
