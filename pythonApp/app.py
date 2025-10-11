@@ -196,13 +196,13 @@ def simulate_household(request: HouseRequest):
         )
 
     except Exception as e:
-        return SimulationResponse(message=f"Simulation failed: {e}")
+        return SimulationResponse(message=f"ERROR: Simulation failed: {e}")
 
 @app.post("/plot_simulation", response_model=SimulationResponse)
 def plot_simulation():
     global house
     if house is None or house.grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+        return SimulationResponse(message="ERROR: Grid data not loaded. Call /load_data first.")
 
     try:
         fig = house.plot_energy_history()
@@ -218,13 +218,13 @@ def plot_simulation():
                 base64Figure=plot_b64,
             )
     except Exception as e:
-        return SimulationResponse(message=f"Plotting failed: {e}")
+        return SimulationResponse(message=f"ERROR: Plotting failed: {e}")
 
 @app.post("/optimize", response_model=SimulationResponse)
 def optimize_battery(request: HouseRequest):
     global house
     if house is None or house.grid_data is None:
-        return SimulationResponse(message="Grid data not loaded. Call /load_data first.")
+        return SimulationResponse(message="ERROR: Grid data not loaded. Call /load_data first.")
 
     try:
         capacity_array, savings_list, annualized_battery_cost_array = house.optimize_battery_capacity()
@@ -242,7 +242,7 @@ def optimize_battery(request: HouseRequest):
             message="Optimization completed successfully",
         )
     except Exception as e:
-        return SimulationResponse(message=f"Optimization failed: {e}")
+        return SimulationResponse(message=f"ERROR: Optimization failed: {e}")
 
 
 # ---------------------------
