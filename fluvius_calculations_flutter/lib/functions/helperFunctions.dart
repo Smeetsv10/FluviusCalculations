@@ -28,9 +28,6 @@ void showPlotDialog(String base64Image, BuildContext context) {
 
   // Remove any whitespace or newlines
   cleanBase64 = cleanBase64.replaceAll(RegExp(r'\s+'), '');
-
-  print(cleanBase64);
-
   showDialog(
     context: context,
     builder: (context) => Dialog(

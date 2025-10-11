@@ -93,7 +93,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> visualizeData() async => _withLoading(() async {
     final house = context.read<House>();
     final response = await ApiService.visualizeHouseData(house);
-    print(response['message']);
     house.grid_data.base64Image = response['base64Figure'];
     showPlotDialog(house.grid_data.base64Image, context);
 
@@ -131,9 +130,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> visualizeSimulation() async => _withLoading(() async {
     final house = context.read<House>();
-    final response = await ApiService.visualizeSimulation(house);
-    house.grid_data.base64Image = response['base64Figure'];
-    showPlotDialog(house.grid_data.base64Image, context);
+    dynamic response = {};
+    print(house.base64Figure);
+    print(house.base64Figure.isNotEmpty);
+    if (house.base64Figure.isNotEmpty) {
+      showPlotDialog(house.base64Figure, context);
+    } else {
+      response = await ApiService.visualizeSimulation(house);
+      house.grid_data.base64Image = response['base64Figure'];
+      showPlotDialog(house.grid_data.base64Image, context);
+    }
 
     ScaffoldMessenger.of(
       context,

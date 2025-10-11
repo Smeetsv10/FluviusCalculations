@@ -40,7 +40,7 @@ class ApiService {
   ) {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      print('✅ $label Response: $data');
+      // print('✅ $label Response: $data');
       return data;
     } else {
       print('❌ $label error: ${response.statusCode} - ${response.body}');
