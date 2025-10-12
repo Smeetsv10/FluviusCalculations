@@ -6,20 +6,11 @@ class ApiService {
   static const String baseUrl = 'http://127.0.0.1:8000';
 
   // Generic GET request
-  static Future<Map<String, dynamic>> get(
-    String endpoint, {
-    House? house,
-  }) async {
+  static Future<Map<String, dynamic>> get(String endpoint) async {
     final url = Uri.parse('$baseUrl/$endpoint');
     try {
       final response = await http.get(url);
       final data = _handleResponse(response, "GET $endpoint");
-
-      // If house is provided, process the Python response
-      if (house != null) {
-        handlePythonResponse(data, house);
-      }
-
       return data;
     } catch (e) {
       print('⚠️ GET request error: $e');
@@ -31,7 +22,7 @@ class ApiService {
   static Future<Map<String, dynamic>> post(
     String endpoint,
     Map body, {
-    House? house,
+    required House house,
   }) async {
     final url = Uri.parse('$baseUrl/$endpoint');
     try {
@@ -41,11 +32,7 @@ class ApiService {
         body: jsonEncode(body),
       );
       final data = _handleResponse(response, "POST $endpoint");
-
-      // If house is provided, process the Python response
-      if (house != null) {
-        handlePythonResponse(data, house);
-      }
+      handlePythonResponse(data, house);
 
       return data;
     } catch (e) {
@@ -61,7 +48,6 @@ class ApiService {
   ) {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // print('✅ $label Response: $data');
       return data;
     } else {
       print('❌ $label error: ${response.statusCode} - ${response.body}');

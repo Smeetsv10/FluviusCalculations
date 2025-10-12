@@ -49,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (e) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(mySnackBar('❌ API Test Failed: $e'));
+      ).showSnackBar(mySnackBar('❌ ERROR: API Test Failed: $e'));
     } finally {
       setState(() => _isTestingAPI = false);
     }
@@ -80,10 +80,17 @@ class _HomeScreenState extends State<HomeScreen> {
   });
 
   Future<void> visualizeData() async => _withLoading(() async {
+    Stopwatch stopwatch = Stopwatch()..start();
     final house = context.read<House>();
-    final response = await ApiService.visualizeHouseData(house);
-    showPlotDialog(house.grid_data.base64Image, context);
-
+    dynamic response = {};
+    if (house.grid_data.base64Image.isNotEmpty) {
+      showPlotDialog(house.grid_data.base64Image, context);
+    } else {
+      response = await ApiService.visualizeHouseData(house);
+      showPlotDialog(house.grid_data.base64Image, context);
+    }
+    stopwatch.stop();
+    print('Visualize Data took: ${stopwatch.elapsedMilliseconds} ms');
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
@@ -117,10 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
     dynamic response = {};
 
     if (house.base64Figure.isNotEmpty) {
+      print('plotting local value');
       showPlotDialog(house.base64Figure, context);
     } else {
       response = await ApiService.visualizeSimulation(house);
-      house.updateParameters(newBase64Image: response['base64Figure']);
       showPlotDialog(house.grid_data.base64Image, context);
     }
 
@@ -160,7 +167,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     const GridDataParameterScreen(),
                     const SizedBox(height: 20),
                     TextButton(
-                      onPressed: () => print(context.read<House>().toJson()),
+                      onPressed: () {
+                        print('House fig:');
+                        print(
+                          context.read<House>().base64Figure.length > 10
+                              ? context.read<House>().base64Figure.substring(
+                                  0,
+                                  10,
+                                )
+                              : context.read<House>().base64Figure,
+                        );
+                        print('GridData:');
+                        print(
+                          gridData.base64Image.length > 10
+                              ? gridData.base64Image.substring(0, 10)
+                              : gridData.base64Image,
+                        );
+                        print('------------------------------');
+                      },
                       child: const Text('Print House JSON'),
                     ),
                     TextButton(
