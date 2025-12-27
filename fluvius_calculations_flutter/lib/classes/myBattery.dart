@@ -69,6 +69,83 @@ class Battery extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Battery utility methods
+  double batteryCost() {
+    return variable_cost * max_capacity + fixed_costs;
+  }
+
+  double currentCapacity() {
+    return SOC * max_capacity;
+  }
+
+  double availableCapacity() {
+    return max_capacity - currentCapacity();
+  }
+
+  double maxChargeRate() {
+    return C_rate * max_capacity;
+  }
+
+  double reserveSoc(DateTime currentTime) {
+    final hour = currentTime.hour;
+    if (hour >= 17 && hour < 20) {
+      // Evening peak
+      return 0.5;
+    } else if (hour >= 0 && hour < 6) {
+      // Night + morning peak
+      return 0.25;
+    } else {
+      // Daytime
+      return 0.05;
+    }
+  }
+
+  double dynamicThreshold(List<double> loadHistory) {
+    if (loadHistory.isEmpty) return 0.0;
+
+    // Take last day (24 * 4 = 96 quarters) or all available data
+    final startIndex = (loadHistory.length - 96).clamp(0, loadHistory.length);
+    final recentLoad = loadHistory.sublist(startIndex);
+
+    final avgLoad = recentLoad.reduce((a, b) => a + b) / recentLoad.length;
+    return 0.15 * avgLoad; // 15% of avg load
+  }
+
+  double storeEnergy(double energy) {
+    if (max_capacity <= 0) return 0;
+
+    // Apply efficiency during charging
+    final energyIn = energy * efficiency;
+
+    final chargeLimit = [
+      maxChargeRate(),
+      availableCapacity(),
+    ].reduce((a, b) => a < b ? a : b);
+    final storableEnergy = [
+      energyIn,
+      chargeLimit,
+    ].reduce((a, b) => a < b ? a : b);
+
+    _SOC += storableEnergy / max_capacity;
+    return storableEnergy / efficiency; // Return original input energy used
+  }
+
+  double releaseEnergy(double energy) {
+    if (max_capacity <= 0) return 0;
+
+    final dischargeLimit = [
+      maxChargeRate(),
+      currentCapacity(),
+    ].reduce((a, b) => a < b ? a : b);
+    final releasableEnergy = [
+      energy,
+      dischargeLimit,
+    ].reduce((a, b) => a < b ? a : b);
+
+    _SOC -= releasableEnergy / max_capacity;
+    return releasableEnergy * efficiency; // Energy actually delivered to load
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'max_capacity': max_capacity,

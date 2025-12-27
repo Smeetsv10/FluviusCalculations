@@ -136,6 +136,55 @@ class _HomeScreenState extends State<HomeScreen> {
     ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
+  Future<void> simulateLocalHousehold() async {
+    final house = context.read<House>();
+
+    setState(() => context.read<GridData>().isLoading = true);
+
+    try {
+      // First parse CSV data if available
+      if (house.grid_data.csvFileBytes != null) {
+        house.grid_data.parseCSVData();
+
+        if (house.grid_data.processedData.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            mySnackBar('No data found in CSV. Please check CSV format.'),
+          );
+          return;
+        }
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(mySnackBar('Please select a CSV file first.'));
+        return;
+      }
+
+      // Run local simulation
+      final result = house.simulateHousehold();
+
+      if (result['success'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          mySnackBar(
+            '✅ Local simulation completed! '
+            'Import: ${house.import_cost.toStringAsFixed(2)}€, '
+            'Export: ${house.export_revenue.toStringAsFixed(2)}€, '
+            'Net: ${house.energy_cost.toStringAsFixed(2)}€',
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(mySnackBar('❌ Simulation failed: ${result['message']}'));
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(mySnackBar('❌ Local simulation error: $e'));
+    } finally {
+      setState(() => context.read<GridData>().isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -221,7 +270,13 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     TextButton(
                       onPressed: gridData.isLoading ? null : simulateHousehold,
-                      child: const Text('Simulate Household'),
+                      child: const Text('Simulate Household (API)'),
+                    ),
+                    TextButton(
+                      onPressed: gridData.isLoading
+                          ? null
+                          : simulateLocalHousehold,
+                      child: const Text('Simulate Household (Local)'),
                     ),
                     TextButton(
                       onPressed: gridData.isLoading

@@ -87,6 +87,173 @@ class House extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Battery Management System methods
+  Map<String, double> batteryManagementSystem(
+    double remainingEnergy,
+    DateTime currentTime,
+  ) {
+    return dynamicBatteryManagementSystem(remainingEnergy, currentTime);
+  }
+
+  Map<String, double> greedyBatteryManagementSystem(double remainingEnergy) {
+    double releasedEnergy = 0;
+    double storedEnergy = 0;
+
+    if (remainingEnergy > 0) {
+      // Discharge battery
+      releasedEnergy = battery.releaseEnergy(remainingEnergy);
+    } else {
+      // Charge battery
+      storedEnergy = battery.storeEnergy(-remainingEnergy);
+    }
+
+    return {'released': releasedEnergy, 'stored': storedEnergy};
+  }
+
+  Map<String, double> dynamicBatteryManagementSystem(
+    double remainingEnergy,
+    DateTime currentTime,
+  ) {
+    double releasedEnergy = 0;
+    double storedEnergy = 0;
+
+    // If surplus -> charge
+    if (remainingEnergy <= 0) {
+      storedEnergy = battery.storeEnergy(-remainingEnergy);
+    }
+    // If deficit and SOC > reserve threshold -> discharge
+    else if (remainingEnergy > 0 &&
+        battery.SOC > battery.reserveSoc(currentTime)) {
+      releasedEnergy = battery.releaseEnergy(remainingEnergy);
+    }
+    // If deficit and SOC ≤ reserve -> cautious strategy
+    else if (remainingEnergy > 0 &&
+        battery.SOC <= battery.reserveSoc(currentTime)) {
+      final threshold = battery.dynamicThreshold(remainingEnergyHistory());
+      if (remainingEnergy > threshold) {
+        releasedEnergy = battery.releaseEnergy(
+          remainingEnergy * 0.5,
+        ); // Conservative discharge
+      }
+      // Else: Don't discharge, preserve battery for critical needs
+    }
+
+    return {'released': releasedEnergy, 'stored': storedEnergy};
+  }
+
+  List<double> remainingEnergyHistory() {
+    final List<double> remaining = [];
+    for (
+      int i = 0;
+      i < import_energy_history.length && i < export_energy_history.length;
+      i++
+    ) {
+      remaining.add(import_energy_history[i] - export_energy_history[i]);
+    }
+    return remaining;
+  }
+
+  // Main simulation method
+  Map<String, dynamic> simulateHousehold() {
+    if (grid_data.processedData.isEmpty) {
+      return {
+        'success': false,
+        'message':
+            'No processed data available. Please load and process CSV data first.',
+      };
+    }
+
+    // Reset simulation data
+    import_energy_history.clear();
+    export_energy_history.clear();
+    battery.SOC_history.clear();
+    import_cost = 0;
+    export_revenue = 0;
+    energy_cost = 0;
+
+    // Reset battery state
+    battery.SOC = 0.33; // Reset to initial SOC
+
+    try {
+      for (final dataPoint in grid_data.processedData) {
+        final remainingEnergy = dataPoint.remaining;
+
+        // Battery management
+        double remainingRequired = 0;
+        double remainingExcess = 0;
+
+        final bmsResult = batteryManagementSystem(
+          remainingEnergy,
+          dataPoint.datetime,
+        );
+        final releasedEnergy = bmsResult['released'] ?? 0;
+        final storedEnergy = bmsResult['stored'] ?? 0;
+
+        if (remainingEnergy > 0) {
+          // Energy deficit - need to import from grid
+          remainingRequired = remainingEnergy - releasedEnergy;
+          if (remainingRequired < 0) remainingRequired = 0; // Can't be negative
+        } else {
+          // Energy surplus - may export to grid
+          remainingExcess = (-remainingEnergy) - storedEnergy;
+          if (remainingExcess < 0) remainingExcess = 0; // Can't be negative
+        }
+
+        // Save history
+        import_energy_history.add(remainingRequired);
+        export_energy_history.add(remainingExcess);
+        battery.SOC_history.add(battery.SOC);
+      }
+
+      // Calculate costs
+      _calculateCosts();
+
+      notifyListeners();
+
+      return {
+        'success': true,
+        'import_energy': import_energy_history,
+        'export_energy': export_energy_history,
+        'soc_history': battery.SOC_history,
+        'import_cost': import_cost,
+        'export_revenue': export_revenue,
+        'energy_cost': energy_cost,
+        'message': 'Simulation completed successfully',
+      };
+    } catch (e) {
+      return {'success': false, 'message': 'Simulation failed: $e'};
+    }
+  }
+
+  void _calculateCosts() {
+    import_cost = import_energy_history.fold(
+      0.0,
+      (sum, energy) => sum + energy * price_per_kWh,
+    );
+    export_revenue = export_energy_history.fold(
+      0.0,
+      (sum, energy) => sum + energy * injection_price,
+    );
+    energy_cost = import_cost - export_revenue;
+  }
+
+  // Cost calculation method
+  double annualizedCostFunction() {
+    if (grid_data.processedData.isEmpty) return 0;
+
+    final firstTime = grid_data.processedData.first.datetime;
+    final lastTime = grid_data.processedData.last.datetime;
+    final timeSpanDays = lastTime.difference(firstTime).inDays.toDouble();
+
+    if (timeSpanDays <= 0) return 0;
+
+    final annualizedEnergyCost = (energy_cost / timeSpanDays) * 365;
+    final annualizedBatteryCost =
+        battery.batteryCost() / battery.battery_lifetime;
+
+    return annualizedEnergyCost + annualizedBatteryCost;
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'location': location,

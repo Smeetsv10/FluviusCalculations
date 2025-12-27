@@ -4,6 +4,13 @@ import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
+class EnergyDataPoint {
+  final DateTime datetime;
+  final double remaining; // Energy required (net - solar)
+
+  EnergyDataPoint({required this.datetime, required this.remaining});
+}
+
 class GridData extends ChangeNotifier {
   String file_path = '';
   String file_name = '';
@@ -19,6 +26,9 @@ class GridData extends ChangeNotifier {
   String base64Image = '';
   DateTime? max_end_date = null;
   DateTime? min_start_date = null;
+
+  // Processed data for simulation
+  List<EnergyDataPoint> processedData = [];
 
   GridData() {
     start_date = getRoundedDateTime(DateTime.now()).subtract(Duration(days: 7));
@@ -117,6 +127,7 @@ class GridData extends ChangeNotifier {
     DateTime? newMinStartDate,
     DateTime? newMaxEndDate,
     String? newBase64Image,
+    List<EnergyDataPoint>? newProcessedData,
   }) {
     if (newFilePath != null) {
       file_path = newFilePath;
@@ -151,7 +162,58 @@ class GridData extends ChangeNotifier {
     if (newBase64Image != null) {
       base64Image = newBase64Image;
     }
+    if (newProcessedData != null) {
+      processedData = newProcessedData;
+    }
     notifyListeners();
+  }
+
+  // Simple CSV parser for simulation (you may want to enhance this)
+  void parseCSVData() {
+    if (csvFileBytes == null) return;
+
+    try {
+      final csvContent = String.fromCharCodes(csvFileBytes!);
+      final lines = csvContent.split('\n');
+
+      processedData.clear();
+
+      // Skip header if present
+      int startLine =
+          lines.isNotEmpty && lines[0].toLowerCase().contains('datetime')
+          ? 1
+          : 0;
+
+      for (int i = startLine; i < lines.length; i++) {
+        final line = lines[i].trim();
+        if (line.isEmpty) continue;
+
+        final parts = line.split(',');
+        if (parts.length < 2) continue;
+
+        try {
+          // Assuming CSV format: datetime, remaining_energy
+          // You may need to adjust this based on your actual CSV format
+          final dateStr = parts[0].trim();
+          final remainingStr = parts[1].trim();
+
+          final datetime = DateTime.parse(dateStr);
+          final remaining = double.parse(remainingStr);
+
+          processedData.add(
+            EnergyDataPoint(datetime: datetime, remaining: remaining),
+          );
+        } catch (e) {
+          print('Error parsing line $i: $e');
+          continue;
+        }
+      }
+
+      print('Parsed ${processedData.length} data points from CSV');
+      notifyListeners();
+    } catch (e) {
+      print('Error parsing CSV: $e');
+    }
   }
 
   Map<String, dynamic> toJson() {
