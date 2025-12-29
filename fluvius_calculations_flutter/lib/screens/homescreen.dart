@@ -9,7 +9,7 @@ import 'package:fluvius_calculations_flutter/screens/houseParametersScreen.dart'
 import 'package:provider/provider.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -36,22 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
     } finally {
       setState(() => gridData.isLoading = false);
-    }
-  }
-
-  Future<void> testAPI() async {
-    setState(() => _isTestingAPI = true);
-    try {
-      final response = await ApiService.testConnection();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(mySnackBar('✅ API Test Success: ${response['message']}'));
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(mySnackBar('❌ ERROR: API Test Failed: $e'));
-    } finally {
-      setState(() => _isTestingAPI = false);
     }
   }
 
@@ -236,27 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                       child: const Text('Print House JSON'),
                     ),
-                    TextButton(
-                      onPressed: _isTestingAPI ? null : testAPI,
-                      child: Wrap(
-                        children: [
-                          _isTestingAPI
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.wifi_protected_setup),
-                          Text(
-                            _isTestingAPI
-                                ? 'Testing...'
-                                : '🔧 Test API Connection',
-                          ),
-                        ],
-                      ),
-                    ),
+
                     const SizedBox(height: 12),
                     Divider(),
                     const SizedBox(height: 12),
