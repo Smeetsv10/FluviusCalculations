@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
-
 import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 void showMyDialog(String title, String message, BuildContext context) {
   showDialog(
@@ -19,37 +19,122 @@ void showMyDialog(String title, String message, BuildContext context) {
   );
 }
 
-void showPlotDialog(String base64Image, BuildContext context) {
+void showPlotDialog(List<String> base64Images, BuildContext context) {
+  if (base64Images.isEmpty) {
+    showMyDialog('No Data', 'No visualization data available.', context);
+    return;
+  }
+
   showDialog(
     context: context,
-    builder: (context) => Dialog(
+    builder: (context) => _PlotDialogState(base64Images: base64Images),
+  );
+}
+
+class _PlotDialogState extends StatefulWidget {
+  final List<String> base64Images;
+
+  const _PlotDialogState({required this.base64Images});
+
+  @override
+  State<_PlotDialogState> createState() => _PlotDialogStateState();
+}
+
+class _PlotDialogStateState extends State<_PlotDialogState> {
+  late int currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    currentIndex = 0;
+  }
+
+  void _nextImage() {
+    if (currentIndex < widget.base64Images.length - 1) {
+      setState(() => currentIndex++);
+    }
+  }
+
+  void _previousImage() {
+    if (currentIndex > 0) {
+      setState(() => currentIndex--);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final decodedBytes = base64Decode(widget.base64Images[currentIndex]);
+    final svgString = utf8.decode(decodedBytes);
+
+    return Dialog(
       child: Container(
-        width: 800,
-        height: 600,
+        width: 1100,
+        height: 750,
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              'Data Visualization',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            // Header with title and figure counter
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Data Visualization',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'Figure ${currentIndex + 1} of ${widget.base64Images.length}',
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
-            Expanded(
-              child: Image.memory(
-                base64Decode(base64Image),
-                fit: BoxFit.contain,
-              ),
-            ),
+            // SVG Display
+            Expanded(child: SvgPicture.string(svgString, fit: BoxFit.contain)),
             const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+            // Navigation Controls
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton(
+                  onPressed: currentIndex > 0 ? _previousImage : null,
+                  child: const Text('← Previous'),
+                ),
+                const SizedBox(width: 16),
+                // Dropdown to select figure
+                DropdownButton<int>(
+                  value: currentIndex,
+                  items: List.generate(
+                    widget.base64Images.length,
+                    (index) => DropdownMenuItem(
+                      value: index,
+                      child: Text('Figure ${index + 1}'),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    if (value != null) {
+                      setState(() => currentIndex = value);
+                    }
+                  },
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: currentIndex < widget.base64Images.length - 1
+                      ? _nextImage
+                      : null,
+                  child: const Text('Next →'),
+                ),
+                const SizedBox(width: 16),
+                ElevatedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Close'),
+                ),
+              ],
             ),
           ],
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 Widget buildField({

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fluvius_calculations_flutter/classes/apiService.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
@@ -16,8 +15,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _isTestingAPI = false;
-
   Future<void> _withLoading(Future<void> Function() action) async {
     final gridData = context.read<GridData>();
     if (gridData.csvFileBytes == null) {
@@ -40,134 +37,58 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> processData() async => _withLoading(() async {
-    final house = context.read<House>();
-    final response = await ApiService.sendHouseData(house);
-
-    if (response['data_info']?['date_range'] != null) {
-      final startDate = DateTime.parse(
-        response['data_info']['date_range']['start'],
+    try {
+      final house = context.read<House>();
+      house.grid_data.processCSVData();
+      ScaffoldMessenger.of(context).showSnackBar(
+        mySnackBar(
+          '✅ CSV processed! Found ${house.grid_data.processedData.length} entries.',
+        ),
       );
-      final endDate = DateTime.parse(
-        response['data_info']['date_range']['end'],
-      );
-      context.read<GridData>().updateParameters(
-        newStartDate: startDate,
-        newEndDate: endDate,
-        newMinStartDate: startDate,
-        newMaxEndDate: endDate,
-      );
-      setState(() {});
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> visualizeData() async => _withLoading(() async {
-    Stopwatch stopwatch = Stopwatch()..start();
-    final house = context.read<House>();
-    dynamic response = {};
-    if (house.grid_data.base64Image.isNotEmpty) {
-      showPlotDialog(house.grid_data.base64Image, context);
-    } else {
-      response = await ApiService.visualizeHouseData(house);
-      showPlotDialog(house.grid_data.base64Image, context);
+    try {
+      final house = context.read<House>();
+      if (house.grid_data.base64Image.isNotEmpty) {
+        showPlotDialog([house.grid_data.base64Image], context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
     }
-    stopwatch.stop();
-    print('Visualize Data took: ${stopwatch.elapsedMilliseconds} ms');
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
   });
 
   Future<void> simulateHousehold() async => _withLoading(() async {
-    final house = context.read<House>();
-    final response = await ApiService.simulateHouse(house);
-
-    if (response.containsKey('error')) {
-      ScaffoldMessenger.of(context).showSnackBar(mySnackBar(response['error']));
-      return;
-    }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
-  });
-
-  Future<void> optimizeBattery() async => _withLoading(() async {
-    final house = context.read<House>();
-    final response = await ApiService.optimizeBattery(house);
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
-  });
-
-  Future<void> visualizeSimulation() async => _withLoading(() async {
-    final house = context.read<House>();
-    dynamic response = {};
-
-    if (house.base64Figure.isNotEmpty) {
-      print('plotting local value');
-      showPlotDialog(house.base64Figure, context);
-    } else {
-      response = await ApiService.visualizeSimulation(house);
-      showPlotDialog(house.grid_data.base64Image, context);
-    }
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(mySnackBar(response['message'] ?? 'Success!'));
-  });
-
-  Future<void> simulateLocalHousehold() async {
-    final house = context.read<House>();
-
-    setState(() => context.read<GridData>().isLoading = true);
-
     try {
-      // First parse CSV data if available
-      if (house.grid_data.csvFileBytes != null) {
-        house.grid_data.parseCSVData();
-
-        if (house.grid_data.processedData.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            mySnackBar('No data found in CSV. Please check CSV format.'),
-          );
-          return;
-        }
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(mySnackBar('Please select a CSV file first.'));
-        return;
-      }
-
-      // Run local simulation
-      final result = house.simulateHousehold();
-
-      if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          mySnackBar(
-            '✅ Local simulation completed! '
-            'Import: ${house.import_cost.toStringAsFixed(2)}€, '
-            'Export: ${house.export_revenue.toStringAsFixed(2)}€, '
-            'Net: ${house.energy_cost.toStringAsFixed(2)}€',
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(mySnackBar('❌ Simulation failed: ${result['message']}'));
-      }
-    } catch (e) {
+      final house = context.read<House>();
+      dynamic result = house.simulateHousehold();
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(mySnackBar('❌ Local simulation error: $e'));
-    } finally {
-      setState(() => context.read<GridData>().isLoading = false);
+      ).showSnackBar(mySnackBar('✅${result['message']}'));
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
     }
-  }
+  });
+
+  Future<void> optimizeBattery() async => _withLoading(() async {});
+
+  Future<void> visualizeSimulation() async => _withLoading(() async {
+    try {
+      final house = context.read<House>();
+      if (house.base64Figure.isNotEmpty) {
+        showPlotDialog([
+          house.grid_data.base64Image,
+          house.base64Figure,
+          house.battery.base64Figure,
+        ], context);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(mySnackBar('Failed: $e'));
+    }
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -199,29 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 20),
                     const GridDataParameterScreen(),
                     const SizedBox(height: 20),
-                    TextButton(
-                      onPressed: () {
-                        print('House fig:');
-                        print(
-                          context.read<House>().base64Figure.length > 10
-                              ? context.read<House>().base64Figure.substring(
-                                  0,
-                                  10,
-                                )
-                              : context.read<House>().base64Figure,
-                        );
-                        print('GridData:');
-                        print(
-                          gridData.base64Image.length > 10
-                              ? gridData.base64Image.substring(0, 10)
-                              : gridData.base64Image,
-                        );
-                        print('------------------------------');
-                      },
-                      child: const Text('Print House JSON'),
-                    ),
-
-                    const SizedBox(height: 12),
                     Divider(),
                     const SizedBox(height: 12),
                     TextButton(
@@ -234,13 +132,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     TextButton(
                       onPressed: gridData.isLoading ? null : simulateHousehold,
-                      child: const Text('Simulate Household (API)'),
-                    ),
-                    TextButton(
-                      onPressed: gridData.isLoading
-                          ? null
-                          : simulateLocalHousehold,
-                      child: const Text('Simulate Household (Local)'),
+                      child: const Text('Simulate Household'),
                     ),
                     TextButton(
                       onPressed: gridData.isLoading

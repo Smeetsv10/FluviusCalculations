@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
+import 'package:intl/intl.dart';
 
 class House extends ChangeNotifier {
   String location = '';
@@ -20,7 +23,6 @@ class House extends ChangeNotifier {
   List<double> capacity_array = [];
   List<double> savings_list = [];
   List<double> annualized_battery_cost_array = [];
-  String base64Figure = ''; // Base64 string for the plot image
 
   void updateParameters({
     String? newLocation,
@@ -81,9 +83,6 @@ class House extends ChangeNotifier {
     if (annualized_battery_cost_array != null) {
       annualized_battery_cost_array = annualized_battery_cost_array;
     }
-    if (newBase64Image != null) {
-      base64Figure = newBase64Image;
-    }
     notifyListeners();
   }
 
@@ -92,7 +91,8 @@ class House extends ChangeNotifier {
     double remainingEnergy,
     DateTime currentTime,
   ) {
-    return dynamicBatteryManagementSystem(remainingEnergy, currentTime);
+    return greedyBatteryManagementSystem(remainingEnergy);
+    // return dynamicBatteryManagementSystem(remainingEnergy, currentTime);
   }
 
   Map<String, double> greedyBatteryManagementSystem(double remainingEnergy) {
@@ -167,16 +167,16 @@ class House extends ChangeNotifier {
     import_energy_history.clear();
     export_energy_history.clear();
     battery.SOC_history.clear();
+    battery.start_date = grid_data.start_date;
+    battery.end_date = grid_data.end_date;
     import_cost = 0;
     export_revenue = 0;
     energy_cost = 0;
 
-    // Reset battery state
-    battery.SOC = 0.33; // Reset to initial SOC
-
     try {
       for (final dataPoint in grid_data.processedData) {
-        final remainingEnergy = dataPoint.remaining;
+        final remainingEnergy =
+            dataPoint.volume_afname_kwh - dataPoint.volume_injectie_kwh;
 
         // Battery management
         double remainingRequired = 0;
@@ -192,7 +192,9 @@ class House extends ChangeNotifier {
         if (remainingEnergy > 0) {
           // Energy deficit - need to import from grid
           remainingRequired = remainingEnergy - releasedEnergy;
-          if (remainingRequired < 0) remainingRequired = 0; // Can't be negative
+          if (remainingRequired < 0) {
+            remainingRequired = 0; // Can't be negative
+          }
         } else {
           // Energy surplus - may export to grid
           remainingExcess = (-remainingEnergy) - storedEnergy;
@@ -252,6 +254,189 @@ class House extends ChangeNotifier {
         battery.batteryCost() / battery.battery_lifetime;
 
     return annualizedEnergyCost + annualizedBatteryCost;
+  }
+
+  String get base64Figure {
+    if (import_energy_history.isEmpty || export_energy_history.isEmpty) {
+      return '';
+    }
+
+    try {
+      // Overall dimensions
+      const int width = 1000;
+      const int height = 600;
+      const double padding = 60.0;
+      const double graphWidth = width - 2 * padding;
+      const double graphHeight = height - 2 * padding;
+
+      // Create SVG string
+      final StringBuffer svg = StringBuffer();
+      svg.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+      svg.writeln(
+        '<svg width="$width" height="$height" xmlns="http://www.w3.org/2000/svg">',
+      );
+
+      // Background
+      svg.writeln('<rect width="$width" height="$height" fill="white"/>');
+
+      // Title
+      svg.writeln(
+        '<text x="${width / 2}" y="30" font-size="20" font-weight="bold" text-anchor="middle" fill="black">Simulation results</text>',
+      );
+
+      // Y-axis label
+      svg.writeln(
+        '<text x="15" y="${height / 2}" font-size="14" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})" fill="black">Energy (kWh)</text>',
+      );
+
+      // X-axis label
+      svg.writeln(
+        '<text x="${width / 2}" y="${height - 5}" font-size="14" text-anchor="middle" fill="black">Datetime (15min)</text>',
+      );
+
+      // Find max for plot
+      double maxImport = import_energy_history.isEmpty
+          ? 1
+          : import_energy_history.reduce((a, b) => a > b ? a : b);
+      double maxExport = export_energy_history.isEmpty
+          ? 1
+          : export_energy_history.reduce((a, b) => a > b ? a : b);
+      double maxEnergy = maxImport > maxExport ? maxImport : maxExport;
+      if (maxEnergy == 0) maxEnergy = 1;
+
+      // Draw axes
+      svg.writeln(
+        '<line x1="$padding" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="black" stroke-width="2"/>',
+      );
+      svg.writeln(
+        '<line x1="$padding" y1="$padding" x2="$padding" y2="${height - padding}" stroke="black" stroke-width="2"/>',
+      );
+
+      // Y-axis ticks and labels
+      for (int i = 0; i <= 5; i++) {
+        double yVal = (maxEnergy / 5) * i;
+        double yPos = height - padding - (i / 5) * graphHeight;
+        svg.writeln(
+          '<line x1="${padding - 5}" y1="$yPos" x2="$padding" y2="$yPos" stroke="black" stroke-width="1"/>',
+        );
+        svg.writeln(
+          '<text x="${padding - 10}" y="${yPos + 5}" font-size="12" text-anchor="end" fill="black">${yVal.toStringAsFixed(2)}</text>',
+        );
+      }
+
+      // X-axis ticks and labels
+      for (int i = 0; i <= 5; i++) {
+        double xPos = padding + (i / 5) * graphWidth;
+        int dataIndex = ((i / 5) * (import_energy_history.length - 1)).toInt();
+        svg.writeln(
+          '<line x1="$xPos" y1="${height - padding}" x2="$xPos" y2="${height - padding + 5}" stroke="black" stroke-width="1"/>',
+        );
+      }
+
+      // Date range on X-axis
+      final startDateStr = DateFormat(
+        'dd/MM/yy HH:mm',
+      ).format(grid_data.start_date);
+      final endDateStr = DateFormat(
+        'dd/MM/yy HH:mm',
+      ).format(grid_data.end_date);
+      svg.writeln(
+        '<text x="$padding" y="${height - 5}" font-size="12" text-anchor="start" fill="black">$startDateStr</text>',
+      );
+      svg.writeln(
+        '<text x="${width - padding}" y="${height - 5}" font-size="12" text-anchor="end" fill="black">$endDateStr</text>',
+      );
+
+      // Plot lines
+      if (import_energy_history.length > 1) {
+        StringBuffer pathImport = StringBuffer('M ');
+        StringBuffer pathExport = StringBuffer('M ');
+
+        for (int i = 0; i < import_energy_history.length; i++) {
+          final x =
+              padding + (i / (import_energy_history.length - 1)) * graphWidth;
+          final yImport =
+              height -
+              padding -
+              (import_energy_history[i] / maxEnergy) * graphHeight;
+          final yExport =
+              height -
+              padding -
+              (export_energy_history[i] / maxEnergy) * graphHeight;
+
+          if (i == 0) {
+            pathImport.write('$x $yImport ');
+            pathExport.write('$x $yExport ');
+          } else {
+            pathImport.write('L $x $yImport ');
+            pathExport.write('L $x $yExport ');
+          }
+        }
+
+        svg.writeln(
+          '<path d="$pathImport" fill="none" stroke="green" stroke-width="2" opacity="0.7"/>',
+        );
+        svg.writeln(
+          '<path d="$pathExport" fill="none" stroke="orange" stroke-width="2" opacity="0.7"/>',
+        );
+      }
+
+      // Draw data points (sampled for large datasets)
+      for (int i = 0; i < import_energy_history.length; i++) {
+        if (i % (import_energy_history.length ~/ 100 + 1) == 0) {
+          final x =
+              padding +
+              (i /
+                      (import_energy_history.length - 1 > 0
+                          ? import_energy_history.length - 1
+                          : 1)) *
+                  graphWidth;
+          final yImport =
+              height -
+              padding -
+              (import_energy_history[i] / maxEnergy) * graphHeight;
+          final yExport =
+              height -
+              padding -
+              (export_energy_history[i] / maxEnergy) * graphHeight;
+
+          svg.writeln(
+            '<circle cx="$x" cy="$yImport" r="3" fill="green" opacity="0.6"/>',
+          );
+          svg.writeln(
+            '<circle cx="$x" cy="$yExport" r="3" fill="orange" opacity="0.6"/>',
+          );
+        }
+      }
+
+      // Legend
+      const legendX = width - 250.0;
+      const legendY = 60.0;
+      svg.writeln(
+        '<rect x="$legendX" y="$legendY" width="220" height="70" fill="white" stroke="black" stroke-width="1"/>',
+      );
+      svg.writeln(
+        '<line x1="${legendX + 10}" y1="${legendY + 20}" x2="${legendX + 40}" y2="${legendY + 20}" stroke="green" stroke-width="3"/>',
+      );
+      svg.writeln(
+        '<text x="${legendX + 50}" y="${legendY + 25}" font-size="14" fill="black">Import Energy</text>',
+      );
+      svg.writeln(
+        '<line x1="${legendX + 10}" y1="${legendY + 50}" x2="${legendX + 40}" y2="${legendY + 50}" stroke="orange" stroke-width="3"/>',
+      );
+      svg.writeln(
+        '<text x="${legendX + 50}" y="${legendY + 55}" font-size="14" fill="black">Export Energy</text>',
+      );
+
+      svg.writeln('</svg>');
+
+      // Encode SVG to base64
+      final svgBytes = utf8.encode(svg.toString());
+      return base64Encode(svgBytes);
+    } catch (e) {
+      print('Error generating base64Figure: $e');
+      return '';
+    }
   }
 
   Map<String, dynamic> toJson() {

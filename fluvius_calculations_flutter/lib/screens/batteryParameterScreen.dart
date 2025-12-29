@@ -30,7 +30,7 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
     efficiencyController = TextEditingController(
       text: battery.efficiency.toString(),
     );
-    socController = TextEditingController(text: battery.SOC.toString());
+    socController = TextEditingController(text: battery.SOC0.toString());
     fixedCostController = TextEditingController(
       text: battery.fixed_costs.toString(),
     );
@@ -95,11 +95,11 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
         Widget buildSOCField() {
           return buildField(
             context: context,
-            title: 'State of Charge (SOC) (0-1)',
+            title: 'Initial State Of Charge (SOC) (0-1)',
             hoverText: 'Initial state of charge of the battery.',
             min: 0,
             max: 1,
-            currentValue: battery.SOC,
+            currentValue: battery.SOC0,
             controller: socController,
             onValueChanged: (value) {
               battery.updateParameters(newSOC: value);

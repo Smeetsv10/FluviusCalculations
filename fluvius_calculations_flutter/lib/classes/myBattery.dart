@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'package:intl/intl.dart';
 
 class Battery extends ChangeNotifier {
-  double max_capacity = 0; // in kWh
+  double max_capacity = 10; // in kWh
   double efficiency = 0.95;
-  double _SOC = 0.33; // Made private to control access through setter
+  double _SOC0 = 0.33; // Initial State of Charge (0 to 1)
+  late double _SOC = _SOC0;
   double fixed_costs = 1000; // in €
   double variable_cost = 700;
   int battery_lifetime = 10;
   double C_rate = 0.25;
   List<double> SOC_history = [];
+  DateTime? start_date;
+  DateTime? end_date;
 
   Battery() {
     if (efficiency < 0 || efficiency > 1) {
@@ -20,17 +25,19 @@ class Battery extends ChangeNotifier {
   }
 
   // Getter for SOC
-  double get SOC => _SOC;
-
-  // Setter for SOC with validation
+  double get SOC0 => _SOC0;
   set SOC(double value) {
-    if (value < 0 || value > 1) {
-      throw ArgumentError('SOC must be between 0 and 1 (0% to 100%)');
+    if (value < 0) {
+      _SOC = 0;
+    } else if (value > 1) {
+      _SOC = 1;
+    } else {
+      _SOC = value;
     }
-    _SOC = value;
-    // Optionally add to history when SOC changes
-    SOC_history.add(value);
+    SOC_history.add(_SOC);
   }
+
+  double get SOC => _SOC;
 
   void updateParameters({
     double? newMaxCapacity,
@@ -75,7 +82,7 @@ class Battery extends ChangeNotifier {
   }
 
   double currentCapacity() {
-    return SOC * max_capacity;
+    return _SOC * max_capacity;
   }
 
   double availableCapacity() {
@@ -112,9 +119,11 @@ class Battery extends ChangeNotifier {
   }
 
   double storeEnergy(double energy) {
+    // Input is the excess energy available for charging
+    // Output is the energy actually stored in the battery
     if (max_capacity <= 0) return 0;
 
-    // Apply efficiency during charging
+    // Apply efficiency during charging, only a fraction of input energy is stored
     final energyIn = energy * efficiency;
 
     final chargeLimit = [
@@ -127,10 +136,12 @@ class Battery extends ChangeNotifier {
     ].reduce((a, b) => a < b ? a : b);
 
     _SOC += storableEnergy / max_capacity;
-    return storableEnergy / efficiency; // Return original input energy used
+    return storableEnergy / efficiency;
   }
 
   double releaseEnergy(double energy) {
+    // Input is the remaining energy required by the load
+    // Output is the energy released by the battery
     if (max_capacity <= 0) return 0;
 
     final dischargeLimit = [
@@ -143,18 +154,161 @@ class Battery extends ChangeNotifier {
     ].reduce((a, b) => a < b ? a : b);
 
     _SOC -= releasableEnergy / max_capacity;
-    return releasableEnergy * efficiency; // Energy actually delivered to load
+    return releasableEnergy; // Do not apply energy during discharge, otherwiase BMS would not be working correctly
   }
 
   Map<String, dynamic> toJson() {
     return {
       'max_capacity': max_capacity,
       'efficiency': efficiency,
-      'SOC': SOC,
+      'SOC': _SOC,
       'variable_cost': variable_cost,
       'fixed_costs': fixed_costs,
       'battery_lifetime': battery_lifetime,
       'C_rate': C_rate,
     };
+  }
+
+  String get base64Figure {
+    if (SOC_history.isEmpty) {
+      return '';
+    }
+
+    try {
+      // Image dimensions
+      const int width = 1000;
+      const int height = 600;
+      const double padding = 60.0;
+      const double graphWidth = width - 2 * padding;
+      const double graphHeight = height - 2 * padding;
+
+      // Find max SOC
+      double maxSOC = SOC_history.reduce((a, b) => a > b ? a : b);
+      if (maxSOC == 0) maxSOC = 1;
+
+      // Create SVG string
+      final StringBuffer svg = StringBuffer();
+      svg.writeln('<?xml version="1.0" encoding="UTF-8"?>');
+      svg.writeln(
+        '<svg width="$width" height="$height" xmlns="http://www.w3.org/2000/svg">',
+      );
+
+      // Background
+      svg.writeln('<rect width="$width" height="$height" fill="white"/>');
+
+      // Title
+      svg.writeln(
+        '<text x="${width / 2}" y="30" font-size="20" font-weight="bold" text-anchor="middle" fill="black">Battery State of Charge</text>',
+      );
+
+      // Y-axis label
+      svg.writeln(
+        '<text x="15" y="${height / 2}" font-size="14" text-anchor="middle" transform="rotate(-90, 15, ${height / 2})" fill="black">SOC (%)</text>',
+      );
+
+      // X-axis label
+      svg.writeln(
+        '<text x="${width / 2}" y="${height - 5}" font-size="14" text-anchor="middle" fill="black">Datetime (15min)</text>',
+      );
+
+      // Draw axes
+      svg.writeln(
+        '<line x1="$padding" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="black" stroke-width="2"/>',
+      );
+      svg.writeln(
+        '<line x1="$padding" y1="$padding" x2="$padding" y2="${height - padding}" stroke="black" stroke-width="2"/>',
+      );
+
+      // Y-axis ticks and labels (0-100%)
+      for (int i = 0; i <= 5; i++) {
+        double yVal = (100.0 / 5) * i;
+        double yPos = height - padding - (i / 5) * graphHeight;
+        svg.writeln(
+          '<line x1="${padding - 5}" y1="$yPos" x2="$padding" y2="$yPos" stroke="black" stroke-width="1"/>',
+        );
+        svg.writeln(
+          '<text x="${padding - 10}" y="${yPos + 5}" font-size="12" text-anchor="end" fill="black">${yVal.toStringAsFixed(0)}%</text>',
+        );
+      }
+
+      // X-axis ticks
+      for (int i = 0; i <= 5; i++) {
+        double xPos = padding + (i / 5) * graphWidth;
+        svg.writeln(
+          '<line x1="$xPos" y1="${height - padding}" x2="$xPos" y2="${height - padding + 5}" stroke="black" stroke-width="1"/>',
+        );
+      }
+
+      // Date range on X-axis
+      if (start_date != null && end_date != null) {
+        final startDateStr = DateFormat('dd/MM/yy HH:mm').format(start_date!);
+        final endDateStr = DateFormat('dd/MM/yy HH:mm').format(end_date!);
+        svg.writeln(
+          '<text x="$padding" y="${height - padding + 20}" font-size="12" text-anchor="start" fill="black">$startDateStr</text>',
+        );
+        svg.writeln(
+          '<text x="${width - padding}" y="${height - padding + 20}" font-size="12" text-anchor="end" fill="black">$endDateStr</text>',
+        );
+      }
+
+      // Plot line
+      if (SOC_history.length > 1) {
+        StringBuffer pathSOC = StringBuffer('M ');
+
+        for (int i = 0; i < SOC_history.length; i++) {
+          final x = padding + (i / (SOC_history.length - 1)) * graphWidth;
+          final ySOC =
+              height - padding - (SOC_history[i] * 100 / 100) * graphHeight;
+
+          if (i == 0) {
+            pathSOC.write('$x $ySOC ');
+          } else {
+            pathSOC.write('L $x $ySOC ');
+          }
+        }
+
+        svg.writeln(
+          '<path d="$pathSOC" fill="none" stroke="purple" stroke-width="2" opacity="0.7"/>',
+        );
+      }
+
+      // Draw data points (sampled for large datasets)
+      for (int i = 0; i < SOC_history.length; i++) {
+        if (i % (SOC_history.length ~/ 100 + 1) == 0) {
+          final x =
+              padding +
+              (i / (SOC_history.length - 1 > 0 ? SOC_history.length - 1 : 1)) *
+                  graphWidth;
+          final ySOC =
+              height - padding - (SOC_history[i] * 100 / 100) * graphHeight;
+
+          svg.writeln(
+            '<circle cx="$x" cy="$ySOC" r="3" fill="purple" opacity="0.6"/>',
+          );
+        }
+      }
+
+      // Legend
+      const legendX = width - 200.0;
+      const legendY = 60.0;
+      svg.writeln(
+        '<rect x="$legendX" y="$legendY" width="180" height="50" fill="white" stroke="black" stroke-width="1"/>',
+      );
+      svg.writeln(
+        '<line x1="${legendX + 10}" y1="${legendY + 20}" x2="${legendX + 40}" y2="${legendY + 20}" stroke="purple" stroke-width="3"/>',
+      );
+      svg.writeln(
+        '<text x="${legendX + 50}" y="${legendY + 25}" font-size="14" fill="black">Battery SOC</text>',
+      );
+
+      svg.writeln('</svg>');
+
+      // Encode SVG to base64
+      final svgBytes = utf8.encode(svg.toString());
+      return base64Encode(svgBytes);
+    } catch (e) {
+      print('Error generating base64Figure: $e');
+      return '';
+    }
   }
 }
