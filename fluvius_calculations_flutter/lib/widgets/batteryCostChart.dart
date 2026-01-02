@@ -104,9 +104,7 @@ class _BatteryCostChartState extends State<BatteryCostChart> {
             color: Colors.blueGrey,
             name: 'Annualized cost (euro)',
             enableTooltip: true,
-            markerSettings: const MarkerSettings(
-              isVisible: false,
-            ),
+            markerSettings: const MarkerSettings(isVisible: false),
           ),
           ScatterSeries<EnergyDataPoint, double>(
             dataSource: [data[minIndex]],
