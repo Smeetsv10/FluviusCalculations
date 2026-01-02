@@ -1,9 +1,0 @@
-matplotlib
-scikit-learn
-numpy
-flet
-pandas
-geopy
-scipy
-requests
-cvxpy
