@@ -19,22 +19,22 @@ void showMyDialog(String title, String message, BuildContext context) {
   );
 }
 
-void showPlotDialog(List<String> base64Images, BuildContext context) {
-  if (base64Images.isEmpty) {
+void showPlotDialog(List<dynamic> figures, BuildContext context) {
+  if (figures.isEmpty) {
     showMyDialog('No Data', 'No visualization data available.', context);
     return;
   }
 
   showDialog(
     context: context,
-    builder: (context) => _PlotDialogState(base64Images: base64Images),
+    builder: (context) => _PlotDialogState(figures: figures),
   );
 }
 
 class _PlotDialogState extends StatefulWidget {
-  final List<String> base64Images;
+  final List<dynamic> figures;
 
-  const _PlotDialogState({required this.base64Images});
+  const _PlotDialogState({required this.figures});
 
   @override
   State<_PlotDialogState> createState() => _PlotDialogStateState();
@@ -50,7 +50,7 @@ class _PlotDialogStateState extends State<_PlotDialogState> {
   }
 
   void _nextImage() {
-    if (currentIndex < widget.base64Images.length - 1) {
+    if (currentIndex < widget.figures.length - 1) {
       setState(() => currentIndex++);
     }
   }
@@ -63,8 +63,18 @@ class _PlotDialogStateState extends State<_PlotDialogState> {
 
   @override
   Widget build(BuildContext context) {
-    final decodedBytes = base64Decode(widget.base64Images[currentIndex]);
-    final svgString = utf8.decode(decodedBytes);
+    final currentFigure = widget.figures[currentIndex];
+
+    Widget content;
+    if (currentFigure is Widget) {
+      content = currentFigure;
+    } else if (currentFigure is String && currentFigure.isNotEmpty) {
+      final decodedBytes = base64Decode(currentFigure);
+      final svgString = utf8.decode(decodedBytes);
+      content = SvgPicture.string(svgString, fit: BoxFit.contain);
+    } else {
+      content = const Center(child: Text('Unsupported figure type'));
+    }
 
     return Dialog(
       child: Container(
@@ -82,14 +92,14 @@ class _PlotDialogStateState extends State<_PlotDialogState> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  'Figure ${currentIndex + 1} of ${widget.base64Images.length}',
+                  'Figure ${currentIndex + 1} of ${widget.figures.length}',
                   style: const TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            // SVG Display
-            Expanded(child: SvgPicture.string(svgString, fit: BoxFit.contain)),
+            // Figure display (widget or decoded SVG)
+            Expanded(child: content),
             const SizedBox(height: 16),
             // Navigation Controls
             Row(
@@ -104,7 +114,7 @@ class _PlotDialogStateState extends State<_PlotDialogState> {
                 DropdownButton<int>(
                   value: currentIndex,
                   items: List.generate(
-                    widget.base64Images.length,
+                    widget.figures.length,
                     (index) => DropdownMenuItem(
                       value: index,
                       child: Text('Figure ${index + 1}'),
@@ -118,7 +128,7 @@ class _PlotDialogStateState extends State<_PlotDialogState> {
                 ),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: currentIndex < widget.base64Images.length - 1
+                  onPressed: currentIndex < widget.figures.length - 1
                       ? _nextImage
                       : null,
                   child: const Text('Next →'),
