@@ -20,6 +20,7 @@ dependencies:
   shared_preferences: ^2.5.3
   flutter_svg: ^2.2.3
   syncfusion_flutter_charts: ^32.1.21
+  timezone: ^0.10.1
     
 
 dev_dependencies:

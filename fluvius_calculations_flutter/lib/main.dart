@@ -6,9 +6,11 @@ import 'package:fluvius_calculations_flutter/classes/myUser.dart';
 import 'package:fluvius_calculations_flutter/screens/homescreen.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  tz.initializeTimeZones();
   runApp(
     MultiProvider(
       providers: [

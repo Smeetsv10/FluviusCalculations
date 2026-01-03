@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 class EnergyDataPoint {
   final DateTime datetime; // Timestamp of the data point
@@ -34,6 +35,7 @@ class GridData extends ChangeNotifier {
   // Processed data for simulation
   List<EnergyDataPoint> processedData = [];
   List<EnergyDataPoint> rawData = [];
+  Duration dt = Duration(minutes: 15);
 
   GridData() {
     start_date = getRoundedDateTime(DateTime.now()).subtract(Duration(days: 7));
@@ -158,7 +160,7 @@ class GridData extends ChangeNotifier {
     notifyListeners();
   }
 
-  void parseCSVData() {
+  void parseCSVData_old() {
     if (csvFileBytes == null) return;
     try {
       final csvContent = String.fromCharCodes(csvFileBytes!);
@@ -167,8 +169,9 @@ class GridData extends ChangeNotifier {
       rawData.clear();
 
       // Skip header if present
-      int startLine =
-          lines.isNotEmpty && lines[0].toLowerCase().contains('ean_id') ? 1 : 0;
+      int startLine = lines.isNotEmpty && lines[0].toLowerCase().contains('ean')
+          ? 1
+          : 0;
 
       for (int i = startLine; i < lines.length; i++) {
         final line = lines[i].trim();
@@ -197,6 +200,105 @@ class GridData extends ChangeNotifier {
           continue;
         }
       }
+      max_end_date ??= rawData.last.datetime;
+      min_start_date ??= rawData.first.datetime;
+      if (min_start_date != null) {
+        start_date = min_start_date!;
+      }
+      if (max_end_date != null) {
+        end_date = max_end_date!;
+      }
+      notifyListeners();
+    } catch (e) {
+      print('Error parsing CSV: $e');
+    }
+  }
+
+  void parseCSVData() {
+    if (csvFileBytes == null) return;
+
+    try {
+      final csvContent = String.fromCharCodes(csvFileBytes!);
+      final lines = csvContent.split('\n');
+
+      // Remove header
+      if (lines.isNotEmpty) {
+        lines.removeAt(0);
+      }
+
+      final brussels = tz.getLocation('Europe/Brussels');
+      const expectedInterval = Duration(minutes: 15);
+
+      DateTime _parseStartUtc(List<String> cols) {
+        final d = cols[0].split('-');
+        final t = cols[1].split(':');
+
+        return tz.TZDateTime(
+          brussels,
+          int.parse(d[2]),
+          int.parse(d[1]),
+          int.parse(d[0]),
+          int.parse(t[0]),
+          int.parse(t[1]),
+          int.parse(t[2]),
+        ).toUtc();
+      }
+
+      DateTime _parseEndUtc(List<String> cols) {
+        final d = cols[2].split('-');
+        final t = cols[3].split(':');
+
+        return tz.TZDateTime(
+          brussels,
+          int.parse(d[2]),
+          int.parse(d[1]),
+          int.parse(d[0]),
+          int.parse(t[0]),
+          int.parse(t[1]),
+          int.parse(t[2]),
+        ).toUtc();
+      }
+
+      // Temporary map to merge Afname + Injectie per UTC timestamp
+      final Map<DateTime, Map<String, double>> tempMap = {};
+
+      for (final line in lines) {
+        if (line.trim().isEmpty) continue;
+
+        final cols = line.split(';');
+
+        final startUtc = _parseStartUtc(cols);
+        final register = cols[7].trim().toLowerCase();
+        final volumeStr = cols[8].trim();
+
+        double volume = 0.0;
+        if (volumeStr.isNotEmpty) {
+          volume = double.tryParse(volumeStr.replaceAll(',', '.')) ?? 0.0;
+        }
+
+        tempMap.putIfAbsent(startUtc, () => {'afname': 0.0, 'injectie': 0.0});
+
+        if (register.contains('afname')) {
+          tempMap[startUtc]!['afname'] = volume;
+        } else if (register.contains('injectie')) {
+          tempMap[startUtc]!['injectie'] = volume;
+        }
+      }
+
+      // Convert to EnergyDataPoint list (UTC!)
+      tempMap.forEach((utcDateTime, values) {
+        rawData.add(
+          EnergyDataPoint(
+            datetime: utcDateTime,
+            volume_afname_kwh: values['afname'] ?? 0.0,
+            volume_injectie_kwh: values['injectie'] ?? 0.0,
+          ),
+        );
+      });
+
+      rawData.sort((a, b) => a.datetime.compareTo(b.datetime));
+
+      // Set start and end dates
       max_end_date ??= rawData.last.datetime;
       min_start_date ??= rawData.first.datetime;
       if (min_start_date != null) {
