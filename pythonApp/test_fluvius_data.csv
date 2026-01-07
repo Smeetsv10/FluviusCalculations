@@ -1,6 +1,0 @@
-EAN_ID,Datum,Datum_Startuur,Volume_Afname_KWh,Volume_Injectie_KWh,Warmtepomp_Indicator,Elektrisch_Voertuig_Indicator,PV_Installatie_Indicator,Contract_Categorie
-1201,2024-01-01,2024-01-01T00:00:00.000Z,0.164,0.0,0,1,1,Residentieel
-1201,2024-01-01,2024-01-01T00:15:00.000Z,0.203,0.0,0,1,1,Residentieel
-1201,2024-01-01,2024-01-01T00:30:00.000Z,0.196,0.0,0,1,1,Residentieel
-1201,2024-01-01,2024-01-01T00:45:00.000Z,0.175,0.0,0,1,1,Residentieel
-1201,2024-01-01,2024-01-01T01:00:00.000Z,0.113,0.0,0,1,1,Residentieel
