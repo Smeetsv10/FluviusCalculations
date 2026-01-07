@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/functions/helperFunctions.dart';
+import 'package:fluvius_calculations_flutter/widgets/piecewiseCostEditor.dart';
 
 class BatteryParameterScreen extends StatefulWidget {
   const BatteryParameterScreen({super.key});
@@ -174,6 +175,21 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
           );
         }
 
+        Widget buildCostModelToggle() {
+          return SwitchListTile(
+            title: const Text('Use Piecewise Linear Cost Model'),
+            subtitle: Text(
+              battery.usePiecewiseCost
+                  ? 'Using custom cost curve'
+                  : 'Using fixed + variable cost',
+            ),
+            value: battery.usePiecewiseCost,
+            onChanged: (value) {
+              battery.updateParameters(newUsePiecewiseCost: value);
+            },
+          );
+        }
+
         return ExpansionTile(
           title: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -249,9 +265,19 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
                   const SizedBox(height: 8),
                   buildCRateField(),
                   const SizedBox(height: 16),
-                  buildFixedCostField(),
+                  const Divider(),
                   const SizedBox(height: 8),
-                  buildVariableCostField(),
+                  buildCostModelToggle(),
+                  const SizedBox(height: 16),
+                  if (!battery.usePiecewiseCost) ...[
+                    buildFixedCostField(),
+                    const SizedBox(height: 8),
+                    buildVariableCostField(),
+                  ] else ...[
+                    PiecewiseCostEditor(battery: battery),
+                  ],
+                  const SizedBox(height: 16),
+                  const Divider(),
                   const SizedBox(height: 8),
                   buildBatteryLifetimeField(),
                 ],

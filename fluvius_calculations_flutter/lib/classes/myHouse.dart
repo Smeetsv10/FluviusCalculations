@@ -47,6 +47,7 @@ class House extends ChangeNotifier {
     capacity_array = [];
     savings_list = [];
     annualized_battery_cost_array = [];
+    notifyListeners();
   }
 
   void updateParameters({

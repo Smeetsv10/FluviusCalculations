@@ -65,6 +65,7 @@ class GridData extends ChangeNotifier {
     dt = Duration(minutes: 15);
     start_date = getRoundedDateTime(DateTime.now()).subtract(Duration(days: 7));
     end_date = getRoundedDateTime(DateTime.now());
+    notifyListeners();
   }
 
   // Getter for SOC

@@ -2,6 +2,18 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 
+class CostPoint {
+  double capacity; // kWh
+  double price; // €
+
+  CostPoint(this.capacity, this.price);
+
+  Map<String, dynamic> toJson() => {'capacity': capacity, 'price': price};
+
+  factory CostPoint.fromJson(Map<String, dynamic> json) =>
+      CostPoint(json['capacity'], json['price']);
+}
+
 class Battery extends ChangeNotifier {
   // Initial default values for resetting
   static const double _INITIAL_MAX_CAPACITY = 10; // in kWh
@@ -24,6 +36,10 @@ class Battery extends ChangeNotifier {
   DateTime? start_date;
   DateTime? end_date;
 
+  // Piecewise linear cost model
+  bool usePiecewiseCost = false;
+  List<CostPoint> costPoints = [];
+
   Battery() {
     initializeParameters();
   }
@@ -40,6 +56,8 @@ class Battery extends ChangeNotifier {
     SOC_history = [];
     start_date = null;
     end_date = null;
+    usePiecewiseCost = false;
+    costPoints = [CostPoint(0, 0), CostPoint(10, 8000)];
 
     if (efficiency < 0 || efficiency > 1) {
       throw ArgumentError('Efficiency must be between 0 and 1');
@@ -47,6 +65,7 @@ class Battery extends ChangeNotifier {
     if (max_capacity < 0) {
       throw ArgumentError('Max capacity must be non-negative');
     }
+    notifyListeners();
   }
 
   // Getter for SOC
@@ -73,6 +92,8 @@ class Battery extends ChangeNotifier {
     int? newBatteryLifetime,
     double? newCRate,
     List<double>? newSOCHistory,
+    bool? newUsePiecewiseCost,
+    List<CostPoint>? newCostPoints,
   }) {
     if (newMaxCapacity != null) {
       max_capacity = newMaxCapacity;
@@ -98,12 +119,56 @@ class Battery extends ChangeNotifier {
     if (newSOCHistory != null) {
       SOC_history = newSOCHistory;
     }
+    if (newUsePiecewiseCost != null) {
+      usePiecewiseCost = newUsePiecewiseCost;
+    }
+    if (newCostPoints != null) {
+      costPoints = newCostPoints;
+    }
     notifyListeners();
   }
 
   // Battery utility methods
   double batteryCost() {
+    if (usePiecewiseCost && costPoints.length >= 2) {
+      return _piecewiseLinearCost(max_capacity);
+    }
     return variable_cost * max_capacity + fixed_costs;
+  }
+
+  double _piecewiseLinearCost(double capacity) {
+    // Sort points by capacity
+    final sortedPoints = List<CostPoint>.from(costPoints)
+      ..sort((a, b) => a.capacity.compareTo(b.capacity));
+
+    // If capacity is below first point, use first point price
+    if (capacity <= sortedPoints.first.capacity) {
+      return sortedPoints.first.price;
+    }
+
+    // If capacity is above last point, extrapolate from last segment
+    if (capacity >= sortedPoints.last.capacity) {
+      final last = sortedPoints.last;
+      final secondLast = sortedPoints[sortedPoints.length - 2];
+      final slope =
+          (last.price - secondLast.price) /
+          (last.capacity - secondLast.capacity);
+      return last.price + slope * (capacity - last.capacity);
+    }
+
+    // Find the two points to interpolate between
+    for (int i = 0; i < sortedPoints.length - 1; i++) {
+      final p1 = sortedPoints[i];
+      final p2 = sortedPoints[i + 1];
+
+      if (capacity >= p1.capacity && capacity <= p2.capacity) {
+        // Linear interpolation
+        final slope = (p2.price - p1.price) / (p2.capacity - p1.capacity);
+        return p1.price + slope * (capacity - p1.capacity);
+      }
+    }
+
+    return fixed_costs + variable_cost * capacity;
   }
 
   double currentCapacity() {
