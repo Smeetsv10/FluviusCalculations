@@ -139,6 +139,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   });
 
+  void resetAllParameters() {
+    final house = context.read<House>();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => AlertDialog(
+        title: const Text('Reset All Parameters?'),
+        content: const Text(
+          'This will reset all parameters (House, Battery, and Grid Data) to their initial default values. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              house.initializeParameters();
+              house.battery.initializeParameters();
+              house.grid_data.initializeParameters();
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                mySnackBar('✅ All parameters reset to default values'),
+              );
+            },
+            child: const Text('Reset', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -211,6 +242,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              Divider(),
+              const SizedBox(height: 12),
             ],
           ),
         ),

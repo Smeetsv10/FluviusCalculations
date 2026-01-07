@@ -175,9 +175,64 @@ class _BatteryParameterScreenState extends State<BatteryParameterScreen> {
         }
 
         return ExpansionTile(
-          title: const Text(
-            "Battery Parameters",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Battery Parameters",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.grey),
+                tooltip: 'Reset Battery Parameters',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Reset Battery Parameters?'),
+                      content: const Text(
+                        'This will reset all battery parameters (capacity, efficiency, SOC, costs, etc.) to their default values.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            battery.initializeParameters();
+                            // Update controllers to reflect reset values
+                            maxCapacityController.text = battery.max_capacity
+                                .toString();
+                            efficiencyController.text = battery.efficiency
+                                .toString();
+                            socController.text = battery.SOC0.toString();
+                            fixedCostController.text = battery.fixed_costs
+                                .toString();
+                            variableCostController.text = battery.variable_cost
+                                .toString();
+                            batteryLifetimeController.text = battery
+                                .battery_lifetime
+                                .toString();
+                            cRateController.text = battery.C_rate.toString();
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  '✅ Battery parameters reset to defaults',
+                                ),
+                                backgroundColor: Colors.grey.shade600,
+                              ),
+                            );
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           initiallyExpanded: false,
           tilePadding: EdgeInsets.zero,

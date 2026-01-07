@@ -90,9 +90,57 @@ class _HouseParameterScreenState extends State<HouseParameterScreen> {
         }
 
         return ExpansionTile(
-          title: const Text(
-            "House Parameters",
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "House Parameters",
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, color: Colors.grey),
+                tooltip: 'Reset House Parameters',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) => AlertDialog(
+                      title: const Text('Reset House Parameters?'),
+                      content: const Text(
+                        'This will reset all house parameters (location, injection price, price per kWh) to their default values.',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            house.initializeParameters();
+                            // Update controllers to reflect reset values
+                            locationController.text = house.location;
+                            injectionPriceController.text = house
+                                .injection_price
+                                .toString();
+                            pricePerKWhController.text = house.price_per_kWh
+                                .toString();
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  '✅ House parameters reset to defaults',
+                                ),
+                                backgroundColor: Colors.grey.shade600,
+                              ),
+                            );
+                          },
+                          child: const Text('Reset'),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           initiallyExpanded: false,
           tilePadding: EdgeInsets.zero,

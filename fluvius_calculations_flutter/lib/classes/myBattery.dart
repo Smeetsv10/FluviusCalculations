@@ -3,19 +3,44 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 
 class Battery extends ChangeNotifier {
-  double max_capacity = 10; // in kWh
-  double efficiency = 0.95;
-  double _SOC0 = 0.33; // Initial State of Charge (0 to 1)
+  // Initial default values for resetting
+  static const double _INITIAL_MAX_CAPACITY = 10; // in kWh
+  static const double _INITIAL_EFFICIENCY = 0.95;
+  static const double _INITIAL_SOC0 = 0.33; // Initial State of Charge (0 to 1)
+  static const double _INITIAL_FIXED_COSTS = 1000; // in €
+  static const double _INITIAL_VARIABLE_COST = 700;
+  static const int _INITIAL_BATTERY_LIFETIME = 10;
+  static const double _INITIAL_C_RATE = 0.25;
+
+  double max_capacity = _INITIAL_MAX_CAPACITY;
+  double efficiency = _INITIAL_EFFICIENCY;
+  double _SOC0 = _INITIAL_SOC0;
   late double _SOC = _SOC0;
-  double fixed_costs = 1000; // in €
-  double variable_cost = 700;
-  int battery_lifetime = 10;
-  double C_rate = 0.25;
+  double fixed_costs = _INITIAL_FIXED_COSTS;
+  double variable_cost = _INITIAL_VARIABLE_COST;
+  int battery_lifetime = _INITIAL_BATTERY_LIFETIME;
+  double C_rate = _INITIAL_C_RATE;
   List<double> SOC_history = [];
   DateTime? start_date;
   DateTime? end_date;
 
   Battery() {
+    initializeParameters();
+  }
+
+  void initializeParameters() {
+    max_capacity = _INITIAL_MAX_CAPACITY;
+    efficiency = _INITIAL_EFFICIENCY;
+    _SOC0 = _INITIAL_SOC0;
+    _SOC = _SOC0;
+    fixed_costs = _INITIAL_FIXED_COSTS;
+    variable_cost = _INITIAL_VARIABLE_COST;
+    battery_lifetime = _INITIAL_BATTERY_LIFETIME;
+    C_rate = _INITIAL_C_RATE;
+    SOC_history = [];
+    start_date = null;
+    end_date = null;
+
     if (efficiency < 0 || efficiency > 1) {
       throw ArgumentError('Efficiency must be between 0 and 1');
     }

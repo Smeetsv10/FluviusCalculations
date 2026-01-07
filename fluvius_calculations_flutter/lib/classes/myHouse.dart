@@ -5,11 +5,16 @@ import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:intl/intl.dart';
 
 class House extends ChangeNotifier {
-  String location = '';
-  double injection_price = 0.05; // (€/kWh)
-  double price_per_kWh = 0.35; // (€/kWh)
-  Battery battery = Battery();
-  GridData grid_data = GridData();
+  // Initial default values for resetting
+  static const String _INITIAL_LOCATION = '';
+  static const double _INITIAL_INJECTION_PRICE = 0.05; // (€/kWh)
+  static const double _INITIAL_PRICE_PER_KWHA = 0.35; // (€/kWh)
+
+  String location = _INITIAL_LOCATION;
+  double injection_price = _INITIAL_INJECTION_PRICE;
+  double price_per_kWh = _INITIAL_PRICE_PER_KWHA;
+  late Battery battery;
+  late GridData grid_data;
 
   List<double> import_energy_history =
       []; // List to store import energy history
@@ -22,6 +27,27 @@ class House extends ChangeNotifier {
   List<double> capacity_array = [];
   List<double> savings_list = [];
   List<double> annualized_battery_cost_array = [];
+
+  House() {
+    initializeParameters();
+  }
+
+  void initializeParameters() {
+    location = _INITIAL_LOCATION;
+    injection_price = _INITIAL_INJECTION_PRICE;
+    price_per_kWh = _INITIAL_PRICE_PER_KWHA;
+    battery = Battery();
+    grid_data = GridData();
+    import_energy_history = [];
+    export_energy_history = [];
+    import_cost = 0.0;
+    export_revenue = 0.0;
+    energy_cost = 0.0;
+    optimal_battery_capacity = 0.0;
+    capacity_array = [];
+    savings_list = [];
+    annualized_battery_cost_array = [];
+  }
 
   void updateParameters({
     String? newLocation,

@@ -18,17 +18,25 @@ class EnergyDataPoint {
 }
 
 class GridData extends ChangeNotifier {
-  String file_path = ''; // Filepath to the Fluvius csv file
-  String file_name = ''; // Filename of the selected file
-  bool flag_EV = true;
-  bool flag_PV = true;
-  int EAN_ID = -1;
+  // Initial default values for resetting
+  static const String _INITIAL_FILE_PATH = '';
+  static const String _INITIAL_FILE_NAME = '';
+  static const bool _INITIAL_FLAG_EV = true;
+  static const bool _INITIAL_FLAG_PV = true;
+  static const int _INITIAL_EAN_ID = -1;
+  static const bool _INITIAL_IS_LOADING = false;
+
+  String file_path = _INITIAL_FILE_PATH; // Filepath to the Fluvius csv file
+  String file_name = _INITIAL_FILE_NAME; // Filename of the selected file
+  bool flag_EV = _INITIAL_FLAG_EV;
+  bool flag_PV = _INITIAL_FLAG_PV;
+  int EAN_ID = _INITIAL_EAN_ID;
   late DateTime start_date; // start date for the selected data (UTC formatted)
   late DateTime end_date; // end date for the selected data (UTC formatted)
   PlatformFile? selectedFile; // Store the selected file
   Uint8List? csvFileBytes; // Store CSV file bytes
 
-  bool isLoading = false;
+  bool isLoading = _INITIAL_IS_LOADING;
   DateTime? max_end_date = null; // Latest available date in CSV
   DateTime? min_start_date = null; // Earliest available date in CSV
 
@@ -38,6 +46,23 @@ class GridData extends ChangeNotifier {
   Duration dt = Duration(minutes: 15);
 
   GridData() {
+    initializeParameters();
+  }
+
+  void initializeParameters() {
+    file_path = _INITIAL_FILE_PATH;
+    file_name = _INITIAL_FILE_NAME;
+    flag_EV = _INITIAL_FLAG_EV;
+    flag_PV = _INITIAL_FLAG_PV;
+    EAN_ID = _INITIAL_EAN_ID;
+    isLoading = _INITIAL_IS_LOADING;
+    selectedFile = null;
+    csvFileBytes = null;
+    max_end_date = null;
+    min_start_date = null;
+    processedData = [];
+    rawData = [];
+    dt = Duration(minutes: 15);
     start_date = getRoundedDateTime(DateTime.now()).subtract(Duration(days: 7));
     end_date = getRoundedDateTime(DateTime.now());
   }
