@@ -141,60 +141,80 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Home Battery Sizing Tool',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-      ),
-      body: Stack(
-        children: [
-          if (isLoading)
-            Container(
-              color: const Color.fromARGB(69, 0, 0, 0),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const HouseParameterScreen(),
-                const SizedBox(height: 20),
-                const BatteryParameterScreen(),
-                const SizedBox(height: 20),
-                const GridDataParameterScreen(),
-                const SizedBox(height: 20),
-                Divider(),
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: isLoading ? null : processData,
-                  child: const Text('Process Data'),
-                ),
-                TextButton(
-                  onPressed: isLoading ? null : visualizeData,
-                  child: const Text('Visualize Data'),
-                ),
-                TextButton(
-                  onPressed: isLoading ? null : simulateHousehold,
-                  child: const Text('Simulate Household'),
-                ),
-                TextButton(
-                  onPressed: isLoading ? null : visualizeSimulation,
-                  child: const Text('Plot Simulation Results'),
-                ),
-                TextButton(
-                  onPressed: isLoading ? null : optimizeBattery,
-                  child: const Text('Optimize Battery'),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
+    return Stack(
+      children: [
+        if (isLoading)
+          Container(
+            color: const Color.fromARGB(69, 0, 0, 0),
+            child: const Center(child: CircularProgressIndicator()),
           ),
-        ],
-      ),
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const HouseParameterScreen(),
+              const SizedBox(height: 20),
+              const BatteryParameterScreen(),
+              const SizedBox(height: 20),
+              const GridDataParameterScreen(),
+              const SizedBox(height: 20),
+              Divider(),
+              const SizedBox(height: 12),
+
+              // Data action buttons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Column(
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : processData,
+                        child: const Text('Process Data'),
+                      ),
+                      TextButton(
+                        onPressed: isLoading ? null : visualizeData,
+                        child: const Text('Visualize Data'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    width: 20,
+                    child: Icon(Icons.arrow_forward_outlined),
+                  ),
+                  // Simulation buttons
+                  Column(
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : simulateHousehold,
+                        child: const Text('Simulate Household'),
+                      ),
+                      TextButton(
+                        onPressed: isLoading ? null : visualizeSimulation,
+                        child: const Text('Plot Simulation Results'),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(
+                    width: 20,
+                    child: Icon(Icons.arrow_forward_outlined),
+                  ),
+                  // Optimize battery button
+                  Column(
+                    children: [
+                      TextButton(
+                        onPressed: isLoading ? null : optimizeBattery,
+                        child: const Text('Optimize Battery'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

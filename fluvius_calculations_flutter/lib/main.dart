@@ -3,7 +3,7 @@ import 'package:fluvius_calculations_flutter/classes/myBattery.dart';
 import 'package:fluvius_calculations_flutter/classes/myGridData.dart';
 import 'package:fluvius_calculations_flutter/classes/myHouse.dart';
 import 'package:fluvius_calculations_flutter/classes/myUser.dart';
-import 'package:fluvius_calculations_flutter/screens/homescreen.dart';
+import 'package:fluvius_calculations_flutter/widgets/screenSelector.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -45,7 +45,7 @@ class MainApp extends StatelessWidget {
         textTheme: GoogleFonts.antaTextTheme(Theme.of(context).textTheme),
         useMaterial3: true,
       ),
-      home: HomeScreen(),
+      home: ScreenSelector(),
     );
   }
 }
